@@ -1,0 +1,21 @@
+---
+
+# Ver https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+
+BasedOnStyle: LLVM
+SpaceBeforeParens: false
+SortIncludes: false
+UseTab: Always
+TabWidth: 4
+ColumnLimit: 0
+IndentWidth: 4
+IndentExternBlock: AfterExternBlock
+AlignConsecutiveMacros: AcrossEmptyLinesAndComments
+IndentCaseLabels: true
+BreakBeforeBraces: Custom
+BraceWrapping:
+    AfterEnum: true
+    AfterClass: true
+    AfterFunction: true
+    AfterStruct: false
+    SplitEmptyFunction: false

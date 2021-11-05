@@ -1,0 +1,45 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "..\\..\\..\\Documentos\\Arduino\\libraries\\ftmodules"
+		},
+		{
+			"path": "..\\..\\Software\\fischertechnik-modules"
+		},
+		{
+			"path": "..\\..\\Software\\fischertechnik-modules\\arduino\\seven-seg-display"
+		},
+		{
+			"path": "..\\..\\..\\Documentos\\Arduino\\libraries\\PinballLib"
+		}
+	],
+	"settings": {
+		"typescript.validate.enable": false,
+		"javascript.validate.enable": false,
+		"cSpell.words": [
+			"Arduinos",
+			"baseplates",
+			"CACC",
+			"DRV",
+			"EEPROM",
+			"Electropneumatics",
+			"fischertechnik",
+			"gameplay",
+			"MOSI",
+			"outhole",
+			"outlane",
+			"outlanes",
+			"playfield",
+			"PWM",
+			"SCL",
+			"SDA",
+			"SPI"
+		],
+		"search.exclude": {
+			"_Lixo/*": true
+		}
+	}
+}

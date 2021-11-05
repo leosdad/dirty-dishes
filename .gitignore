@@ -1,0 +1,11 @@
+
+.gitignore
+
+_Lixo/
+artwork/
+.vscode/
+sounds/
+
+Description.txt
+*.xlsx
+pinball/*.md
