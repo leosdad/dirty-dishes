@@ -78,7 +78,7 @@ void Leds::waitAnimation(bool (*callback)())
 		ulong msStart = millis();
 		while(millis() < msStart + ANIMATION_TIME) {
 			if(callback()) {
-				allOff();
+				allOff(true);
 				return;
 			}
 		}
@@ -95,10 +95,12 @@ void Leds::redFlashes(int time)
 	}
 }
 
-void Leds::allOff()
+void Leds::allOff(bool lightsOff)
 {
 	for(int i = 0; i < NLEDS; i++) {
-		Off((childLeds)i);
+		if(lightsOff || (childLeds)i != childLeds::LIGHTS) {
+			Off((childLeds)i);
+		}
 	}
 }
 

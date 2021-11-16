@@ -117,10 +117,10 @@ sLedData ledData[NLEDS] = {
 
 	// NeoPixels
 
-	{3, true, timers[4], outState::OFF, false, 1},
-	{2, true, timers[5], outState::OFF, false, 1},
-	{1, true, timers[6], outState::OFF, false, 1},
-	{0, true, timers[7], outState::OFF, false, 1},
+	{3,					true, timers[4], outState::OFF, false, 1},
+	{2,					true, timers[5], outState::OFF, false, 1},
+	{1,					true, timers[6], outState::OFF, false, 1},
+	{0,					true, timers[7], outState::OFF, false, 1},
 
 	// Luzes dos sensores
 
@@ -165,7 +165,7 @@ void loop()
 
 	// testServo();
 	// testSound();
-	// testLEDs();
+	// testAllLeds();
 	// testOutputs();
 }
 
@@ -234,23 +234,45 @@ void stopTimer(uint index)
 
 #pragma region LED functions ---------------------------------------------------
 
-void setLed(uint index, bool on, int colr)
+// void setLed(uint index, bool on, int colr)
+// {
+// 	if(ledData[index].isNeoPixel) {
+// 		if(on && colr > -1 && colr != ledData[index].colorIndex) {
+// 			ledData[index].colorIndex = colr;
+// 			bitClear(pixBits, ledData[index].ledIndex);
+// 		}
+// 		pixels.setPixelColor(ledData[index].ledIndex, on ?
+// 			colors[ledData[index].colorIndex] : colors[(int)colorIndex::BLACK]);
+// 		lastPixBits = pixBits;
+// 		if(on) {
+// 			bitSet(pixBits, ledData[index].ledIndex);
+// 		} else {
+// 			bitClear(pixBits, ledData[index].ledIndex);
+// 		}
+// 	} else {
+// 		digitalWrite(ledData[index].ledIndex, on);
+// 	}
+// }
+
+void setLed(uint index, bool value, int colr)
 {
-	if(ledData[index].isNeoPixel) {
-		if(on && colr > -1 && colr != ledData[index].colorIndex) {
-			ledData[index].colorIndex = colr;
-			bitClear(pixBits, ledData[index].ledIndex);
+	sLedData ld = ledData[index];
+
+	if(ld.isNeoPixel) {
+		if(value && colr > -1 && colr != ld.colorIndex) {
+			ld.colorIndex = colr;
+			// bitClear(pixBits, ld.ledIndex);
 		}
-		pixels.setPixelColor(ledData[index].ledIndex, on ?
-			colors[ledData[index].colorIndex] : colors[(int)colorIndex::BLACK]);
+		pixels.setPixelColor(ld.ledIndex, value ?
+			colors[ld.colorIndex] : colors[(int)colorIndex::BLACK]);
 		lastPixBits = pixBits;
-		if(on) {
-			bitSet(pixBits, ledData[index].ledIndex);
+		if(value) {
+			bitSet(pixBits, ld.ledIndex);
 		} else {
-			bitClear(pixBits, ledData[index].ledIndex);
+			bitClear(pixBits, ld.ledIndex);
 		}
 	} else {
-		digitalWrite(ledData[index].ledIndex, on);
+		digitalWrite(ld.ledIndex, value);
 	}
 }
 
@@ -425,6 +447,22 @@ void testServo()
 	}
 
 	rbdServo.update();
+}
+
+uint cLed = 0;
+uint cCol = 1;
+
+void testAllLeds()
+{
+	setLed(cLed, false, 0);
+	cLed = cLed == 8 ? 0 : cLed + 1;
+	if(cLed == 8) {
+		cCol = cCol == 9 ? 1 : cCol + 1;
+	}
+	setLed(cLed, true, cCol);
+	Serial.print("LED #");
+	Serial.println(cLed);
+	delay(500);
 }
 
 #pragma endregion --------------------------------------------------------------

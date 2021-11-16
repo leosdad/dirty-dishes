@@ -364,6 +364,11 @@ void ballStart(bool resetGame)
 	Serial.print("Ball #");
 	Serial.println(currentBall);
 	openDoor();
+	if(resetGame) {
+		leds.allOff(false);
+	}
+	leds.Off(childLeds::LEFT_OUTLANE);
+	leds.Off(childLeds::RIGHT_OUTLANE);
 	leds.Flash(childLeds::ROLLOVER_SKILL, NORMAL_FLASH);
 	displayBall();
 	gameState = gameStates::LAUNCHED;
@@ -612,7 +617,7 @@ bool sensorScore(uint port, ulong *msVar, bool positiveLogic,
 			if(callback) {
 				callback(param);
 			}
-			if(led <= childLeds::LIGHTS) {
+			if(led != childLeds::LIGHTS) {
 				if(ledOp == outState::ONESHOT) {
 					leds.OneShot(led, DEFAULT_ONESHOT, colorIndex::WHITE);
 				} else {
@@ -771,10 +776,14 @@ bool checkOutlanes()
 	if(sensorScore(leftOutlaneSensor, &leftOutlaneMs, false,
 		OUTLANE_POINTS, childLeds::LEFT_OUTLANE, outState::ONESHOT, NULL, 0)) {
 		hit = true;
+		// HACK: Não está claro se resolve o problema
+		delay(DEFAULT_DEBOUNCE);
 	}
 	if(sensorScore(rightOutlaneSensor, &rightOutlaneMs, false,
 		OUTLANE_POINTS, childLeds::RIGHT_OUTLANE, outState::ONESHOT, NULL, 0)) {
 		hit = true;
+		// HACK: Não está claro se resolve o problema
+		delay(DEFAULT_DEBOUNCE);
 	}
 
 	return hit;
@@ -1080,19 +1089,22 @@ void testLeds()
 	delay(1000);
 }
 
-int cLed = 0;
+uint cLed = 0;
+uint cCol = 1;
 
 void testAllLeds()
 {
 	DisplayStop();
 	leds.Off((childLeds)cLed);
 	cLed = cLed == 8 ? 0 : cLed + 1;
-	leds.On((childLeds)cLed, colorIndex::GREEN);
+	if(cLed == 8) {
+		cCol = cCol == 9 ? 1 : cCol + 1;
+	}
+	leds.On((childLeds)cLed, (colorIndex)cCol);
 	delay(500);
 	DisplayClear();
 	u2s(cLed);
 	DisplayShow(displayBuffer);
-	// delay(500);
 }
 
 void testSensor(byte sensor, bool *last, char *name)

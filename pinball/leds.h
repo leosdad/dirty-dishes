@@ -19,7 +19,7 @@ class Leds
 
 	void waitAnimation(bool (*callback)());
 	void redFlashes(int time);
-	void allOff();
+	void allOff(bool lightsOff);
 
 	void On(childLeds led, colorIndex colorIndex);
 	void On(childLeds led);

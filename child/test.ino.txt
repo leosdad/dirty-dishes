@@ -1,0 +1,231 @@
+// -----------------------------------------------------------------------------
+
+// Dirty Dishes pinball: child Arduino
+// Rubem Pechansky 2021
+
+// -----------------------------------------------------------------------------
+
+#include <Adafruit_NeoPixel.h>
+#include <Arduino.h>
+
+#define PIN        A3
+#define NUMPIXELS 4
+#define DELAYVAL 500
+
+Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+
+void setup()
+{
+  pixels.begin();
+}
+
+void loop()
+{
+//   pixels.clear();
+
+  for(int i = 0; i < NUMPIXELS; i++) {
+    pixels.setPixelColor(i, 0xff0000);
+    pixels.show();
+    delay(DELAYVAL);
+	pixels.setPixelColor(i, 0);
+  }
+}
+
+#if false
+
+#include <Arduino.h>
+#include <AsyncDelay.h>
+#include <FtModules.h>
+#include <Adafruit_NeoPixel.h>
+
+#include <Simpletypes.h>
+#include <child.h>
+
+#pragma region Constants -------------------------------------------------------
+
+// Baud rates
+
+#define BAUDRATE			57600
+#define NUMPIXELS1			4
+
+// Pixel colors
+
+const uint32_t colors[] =
+{
+	0x000000,	// BLACK
+	0xFFFF30,	// WHITE
+	0xF0FFD8,	// COOLWHITE
+	0xFF0000,	// RED
+	0x00FF00,	// GREEN
+	0x0000FF,	// BLUE
+	0x00FFFF,	// CYAN
+	0xFF00FF,	// MAGENTA
+	0xFF9000,	// YELLOW
+	0xFF4000,	// ORANGE
+};
+
+// const byte MAXCMD = BUFFER_LENGTH;
+
+// Arduino pins
+
+const byte rolloverSkillLed = 9;
+const byte rollover3Led	= 10;
+const byte rollover2Led = 11;
+const byte rollover1Led = 12;
+const byte lights = 13;
+const byte rgbPixelsPin = A3;
+
+// Inputs and outputs
+
+const byte outputs[] = {
+	rolloverSkillLed, rollover1Led, rollover2Led, rollover3Led,
+	lights
+};
+
+#pragma endregion --------------------------------------------------------------
+
+#pragma region Variables -------------------------------------------------------
+
+byte pixBits = 0;
+byte lastPixBits = 0;
+
+// NeoPixels
+
+Adafruit_NeoPixel pixels(NUMPIXELS1, rgbPixelsPin, NEO_GRB + NEO_KHZ800);
+
+struct sLedData {
+	uint ledIndex;
+	bool isNeoPixel;
+	AsyncDelay timer;
+	outState flash;
+	bool state;
+	byte colorIndex;
+};
+
+AsyncDelay timers[NLEDS];
+
+sLedData ledData[NLEDS] = {
+
+	// LEDs
+
+	{rollover1Led,     false, timers[0], outState::OFF, false, 0},
+	{rollover2Led,     false, timers[1], outState::OFF, false, 0},
+	{rollover3Led,     false, timers[2], outState::OFF, false, 0},
+	{rolloverSkillLed, false, timers[3], outState::OFF, false, 0},
+
+	// NeoPixels
+
+	{3,					true, timers[4], outState::OFF, false, 1},
+	{2,					true, timers[5], outState::OFF, false, 1},
+	{1,					true, timers[6], outState::OFF, false, 1},
+	{0,					true, timers[7], outState::OFF, false, 1},
+
+	// Luzes dos sensores
+
+	{lights,           false, timers[8], outState::OFF, false, 0},
+
+};
+
+#pragma endregion --------------------------------------------------------------
+
+#pragma region Setup -----------------------------------------------------------
+
+void setup()
+{
+	Serial.begin(BAUDRATE);
+
+	// Set up pin modes
+
+	for(int i = 0; i < sizeof outputs; i++) {
+		pinMode(outputs[i], OUTPUT);
+	}
+
+	pixels.begin();
+	pixels.clear();
+	pixels.show();
+
+	Serial.println("Child Arduino is ready");
+}
+
+#pragma endregion --------------------------------------------------------------
+
+#pragma region Main loop / game loop -------------------------------------------
+
+void loop()
+{
+	gameLoop();
+	// testAllLeds();
+	testNeoPixels();
+}
+
+void gameLoop()
+{
+	if(pixBits != lastPixBits) {
+		pixels.show();
+		lastPixBits = pixBits;
+		delay(1);
+	}
+}
+
+#pragma endregion --------------------------------------------------------------
+
+#pragma region LED functions ---------------------------------------------------
+
+void setLed(uint index, bool value, int colr)
+{
+	sLedData ld = ledData[index];
+
+	if(ld.isNeoPixel) {
+		if(value && colr > -1 && colr != ld.colorIndex) {
+			ld.colorIndex = colr;
+			// bitClear(pixBits, ld.ledIndex);
+		}
+		pixels.setPixelColor(ld.ledIndex, value ?
+			colors[ld.colorIndex] : colors[(int)colorIndex::BLACK]);
+		lastPixBits = pixBits;
+		if(value) {
+			bitSet(pixBits, ld.ledIndex);
+		} else {
+			bitClear(pixBits, ld.ledIndex);
+		}
+	} else {
+		digitalWrite(ld.ledIndex, value);
+	}
+}
+
+#pragma endregion --------------------------------------------------------------
+
+#pragma region Test functions --------------------------------------------------
+
+uint cLed = 0;
+uint cCol = 1;
+
+void testAllLeds()
+{
+	setLed(cLed, false, 0);
+	cLed = cLed == 8 ? 0 : cLed + 1;
+	if(cLed == 8) {
+		cCol = cCol == 9 ? 1 : cCol + 1;
+	}
+	setLed(cLed, true, cCol);
+	Serial.print("LED #");
+	Serial.println(cLed);
+	delay(500);
+}
+
+void testNeoPixels()
+{
+	setLed(cLed, false, 0);
+	cLed = cLed == 7 ? 4 : cLed + 1;
+	if(cLed == 7) {
+		cCol = cCol == 9 ? 1 : cCol + 1;
+	}
+	setLed(cLed, true, cCol);
+	Serial.print("LED #");
+	Serial.println(cLed);
+	delay(300);
+}
+
+#pragma endregion --------------------------------------------------------------
+
+#endif

@@ -1,7 +1,8 @@
 /*
-	Display wrapper class
+	Sound wrapper class
 */
 
+#include "child.h"
 #include "sound.h"
 
 void PlaySound(byte soundIndex)
