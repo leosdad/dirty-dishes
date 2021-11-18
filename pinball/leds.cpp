@@ -9,50 +9,30 @@
 
 #define ANIMATION_TIME		800
 
-// FtModules::I2C _i2c;
-
-void Leds::Init()
-{
-	_colorOffset = 0;
-}
-
 #pragma region LED state functions ---------------------------------------------
 
 void Leds::On(childLeds led)
 {
-	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led, (byte)outState::ON, 1, 0);
-}
-
-void Leds::On(childLeds led, colorIndex colorIndex)
-{
-	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led, (byte)outState::ON, (byte)colorIndex, 0);
+	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led,
+		(byte)outState::ON, 1);
 }
 
 void Leds::Flash(childLeds led, uint time)
 {
-	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led, (byte)outState::FLASH, 1, time / 100);
-}
-
-void Leds::Flash(childLeds led, uint time, colorIndex colorIndex)
-{
-	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led, (byte)outState::FLASH, (byte)colorIndex,
-		time / 100);
+	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led,
+		(byte)outState::FLASH, 1, time / 100);
 }
 
 void Leds::OneShot(childLeds led, uint time)
 {
-	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led, (byte)outState::ONESHOT, 1, time / 100);
-}
-
-void Leds::OneShot(childLeds led, uint time, colorIndex colorIndex)
-{
-	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led, (byte)outState::ONESHOT, (byte)colorIndex,
-		time / 100);
+	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led,
+		(byte)outState::ONESHOT, 1, time / 100);
 }
 
 void Leds::Off(childLeds led)
 {
-	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led, (byte)outState::OFF, (byte)colorIndex::BLACK, 0);
+	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led,
+		(byte)outState::OFF, 0);
 }
 
 #pragma endregion --------------------------------------------------------------
@@ -61,11 +41,9 @@ void Leds::Off(childLeds led)
 
 void Leds::waitAnimation(bool (*callback)())
 {
-	for(int i = 0; i < NLEDS - 1; i++) {
+	for(int i = 0; i < 4; i++) {
 
 		childLeds led = (childLeds)(i % 4);
-		childLeds pix = (childLeds)(4 + i % 4);
-		colorIndex color = (colorIndex)(animColors[(_colorOffset + i / 2) % nColors]);
 
 		if(i % 2) {
 			On((childLeds)8);
@@ -74,7 +52,7 @@ void Leds::waitAnimation(bool (*callback)())
 		}
 
 		On(led);
-		On(pix, color);
+		On((childLeds)((int)led + 4));
 		ulong msStart = millis();
 		while(millis() < msStart + ANIMATION_TIME) {
 			if(callback()) {
@@ -83,15 +61,14 @@ void Leds::waitAnimation(bool (*callback)())
 			}
 		}
 		Off(led);
-		Flash(pix, ANIMATION_TIME / 2, color);
+		Off((childLeds)((int)led + 4));
 	}
-	_colorOffset++;
 }
 
-void Leds::redFlashes(int time)
+void Leds::flashes(int time)
 {
 	for(int i = 0; i < NLEDS; i++) {
-		Flash((childLeds)i, time, colorIndex::RED);
+		Flash((childLeds)i, time);
 	}
 }
 

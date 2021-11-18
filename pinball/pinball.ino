@@ -239,7 +239,6 @@ void setup()
 	Serial.begin(BAUDRATE);
 	Wire.begin();
 
-	leds.Init();
 	setPinModes();
 	resetChild();
 	initDisplay();
@@ -619,9 +618,9 @@ bool sensorScore(uint port, ulong *msVar, bool positiveLogic,
 			}
 			if(led != childLeds::LIGHTS) {
 				if(ledOp == outState::ONESHOT) {
-					leds.OneShot(led, DEFAULT_ONESHOT, colorIndex::WHITE);
+					leds.OneShot(led, DEFAULT_ONESHOT);
 				} else {
-					leds.On(led, colorIndex::WHITE);
+					leds.On(led);
 				}
 			}
 			if(positiveLogic) {
@@ -796,7 +795,7 @@ bool checkHold()
 	if(hold && currentMs > stopMagMs + RELEASE_TIME) {
 		if(analogScore(holdSensor, &holdSensorMs, MIN_ANALOG_THRESHOLD,
 			HOLD_SENSOR_THRESHOLD, HOLD_POINTS)) {
-			leds.OneShot(childLeds::HOLD, DEFAULT_ONESHOT, colorIndex::RED);
+			leds.OneShot(childLeds::HOLD, DEFAULT_ONESHOT);
 			hit = true;
 			displayScore();
 		}
@@ -815,7 +814,7 @@ bool checkHold()
 
 			if(stopSensorHits + 1 == holdThreshold) {
 				hold = true;
-				leds.On(childLeds::HOLD, colorIndex::WHITE);
+				leds.On(childLeds::HOLD);
 				digitalWrite(stopMagnet, HIGH);
 				stopMagMs = currentMs;
 			} else {
@@ -1077,7 +1076,7 @@ void testInputs()
 
 void testLeds()
 {
-	leds.Flash(childLeds::LEFT_ORBIT, 100, colorIndex::ORANGE);
+	leds.Flash(childLeds::LEFT_ORBIT, 100);
 	leds.Flash(childLeds::ROLLOVER1, 100);
 	leds.OneShot(childLeds::ROLLOVER2, 100);
 
@@ -1100,7 +1099,7 @@ void testAllLeds()
 	if(cLed == 8) {
 		cCol = cCol == 9 ? 1 : cCol + 1;
 	}
-	leds.On((childLeds)cLed, (colorIndex)cCol);
+	leds.On((childLeds)cLed);
 	delay(500);
 	DisplayClear();
 	u2s(cLed);

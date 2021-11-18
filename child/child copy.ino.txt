@@ -9,9 +9,10 @@
 #include <Wire.h>
 #include <AsyncDelay.h>
 #include <FtModules.h>
-#include <Servo.h>
+#include <RBD_Servo.h>
 #include <SoftwareSerial.h>
 #include <DFRobotDFPlayerMini.h>
+#include <Adafruit_NeoPixel.h>
 
 #include <Simpletypes.h>
 #include <child.h>
@@ -30,53 +31,77 @@
 #define FX_TIMEOUT			10
 #define NUMPIXELS1			4
 
+// Pixel colors
+
+const uint32_t colors[] =
+{
+	0x000000,	// BLACK
+	0xFFFF30,	// WHITE
+	0xF0FFD8,	// COOLWHITE
+	0xFF0000,	// RED
+	0x00FF00,	// GREEN
+	0x0000FF,	// BLUE
+	0x00FFFF,	// CYAN
+	0xFF00FF,	// MAGENTA
+	0xFF9000,	// YELLOW
+	0xFF4000,	// ORANGE
+};
+
 // const byte MAXCMD = BUFFER_LENGTH;
 
 // Arduino pins
 
 const byte soundTx = 2;
 const byte soundRx = 3;
-const byte servoDoor = 6;
+const byte doorServo = 6;
 const byte feederMotor = 8;
 const byte rolloverSkillLed = 9;
 const byte rollover3Led	= 10;
 const byte rollover2Led = 11;
 const byte rollover1Led = 12;
 const byte lights = 13;
-const byte leftOrbitLed = A0;
-const byte holdLed = A1;
-const byte leftOutlaneLed = A2;
-const byte rightOutlaneLed = A3;
+const byte rgbPixelsPin = A3;
 
 // Inputs and outputs
 
 const byte outputs[] = {
-	servoDoor, feederMotor,
+	doorServo, feederMotor,
 	rolloverSkillLed, rollover1Led, rollover2Led, rollover3Led,
-	leftOrbitLed, holdLed, leftOutlaneLed, rightOutlaneLed,
 	lights
 };
 
-Servo servo;
+// Default servo values
+RBD::Servo rbdServo(doorServo, 544, 2400);
 
 #pragma endregion --------------------------------------------------------------
 
 #pragma region Variables -------------------------------------------------------
 
 uint servoPos = 0;
+bool updateServo = true;
 byte pixBits = 0;
 byte lastPixBits = 0;
+
+// Servo
+
+AsyncDelay servoTimer;
 
 // Sound
 
 SoftwareSerial mySoftwareSerial(soundRx, soundTx);
 DFRobotDFPlayerMini myDFPlayer;
 
+// NeoPixels
+
+Adafruit_NeoPixel pixels(NUMPIXELS1, rgbPixelsPin, NEO_GRB + NEO_KHZ800);
+
 struct sLedData {
 	uint ledIndex;
+	bool isNeoPixel;
 	AsyncDelay timer;
 	outState flash;
 	bool state;
+	byte colorIndex;
 };
 
 AsyncDelay timers[NLEDS];
@@ -85,15 +110,21 @@ sLedData ledData[NLEDS] = {
 
 	// LEDs
 
-	{rollover1Led,    	timers[0], outState::OFF, false},
-	{rollover2Led,    	timers[1], outState::OFF, false},
-	{rollover3Led,    	timers[2], outState::OFF, false},
-	{rolloverSkillLed,	timers[3], outState::OFF, false},
-	{holdLed,			timers[5], outState::OFF, false},
-	{rightOutlaneLed,	timers[7], outState::OFF, false},
-	{leftOutlaneLed,	timers[6], outState::OFF, false},
-	{leftOrbitLed,		timers[4], outState::OFF, false},
-	{lights,           	timers[8], outState::OFF, false},
+	{rollover1Led,     false, timers[0], outState::OFF, false, 0},
+	{rollover2Led,     false, timers[1], outState::OFF, false, 0},
+	{rollover3Led,     false, timers[2], outState::OFF, false, 0},
+	{rolloverSkillLed, false, timers[3], outState::OFF, false, 0},
+
+	// NeoPixels
+
+	{3,					true, timers[4], outState::OFF, false, 1},
+	{2,					true, timers[5], outState::OFF, false, 1},
+	{1,					true, timers[6], outState::OFF, false, 1},
+	{0,					true, timers[7], outState::OFF, false, 1},
+
+	// Luzes dos sensores
+
+	{lights,           false, timers[8], outState::OFF, false, 0},
 };
 
 #pragma endregion --------------------------------------------------------------
@@ -109,9 +140,13 @@ void setup()
 
 	for(int i = 0; i < sizeof outputs; i++) {
 		pinMode(outputs[i], OUTPUT);
+		// digitalWrite(outputs[i], (int)outState::OFF);
 	}
 
-	servo.attach(servoDoor);
+	pixels.begin();
+	pixels.clear();
+	pixels.show();
+
 	closeDoor();
 
 	Wire.begin(CHILD_ADDRESS);
@@ -126,12 +161,31 @@ void setup()
 
 void loop()
 {
-	checkTimers();
+	gameLoop();
 
 	// testServo();
-	// testAllLeds();
 	// testSound();
+	// testAllLeds();
 	// testOutputs();
+}
+
+void gameLoop()
+{
+	if(pixBits != lastPixBits) {
+		pixels.show();
+		lastPixBits = pixBits;
+		delay(1);
+	}
+
+	checkTimers();
+
+	if(servoTimer.isExpired()) {
+		updateServo = false;
+	}
+
+	if(updateServo) {
+		rbdServo.update();
+	}
 }
 
 #pragma endregion --------------------------------------------------------------
@@ -158,10 +212,10 @@ void checkTimers()
 		if(ledData[i].timer.isExpired() && ledData[i].flash > outState::OFF) {
 			if(ledData[i].flash == outState::FLASH) {
 				ledData[i].state = !ledData[i].state;
-				setLed(i, ledData[i].state);
+				setLed(i, ledData[i].state, -1);
 				ledData[i].timer.repeat();
 			} else if(ledData[i].flash == outState::ONESHOT) {
-				setLed(i, false);
+				setLed(i, false, -1);
 			}
 		}
 	}
@@ -180,33 +234,69 @@ void stopTimer(uint index)
 
 #pragma region LED functions ---------------------------------------------------
 
-void setLed(uint index, bool value)
+// void setLed(uint index, bool on, int colr)
+// {
+// 	if(ledData[index].isNeoPixel) {
+// 		if(on && colr > -1 && colr != ledData[index].colorIndex) {
+// 			ledData[index].colorIndex = colr;
+// 			bitClear(pixBits, ledData[index].ledIndex);
+// 		}
+// 		pixels.setPixelColor(ledData[index].ledIndex, on ?
+// 			colors[ledData[index].colorIndex] : colors[(int)colorIndex::BLACK]);
+// 		lastPixBits = pixBits;
+// 		if(on) {
+// 			bitSet(pixBits, ledData[index].ledIndex);
+// 		} else {
+// 			bitClear(pixBits, ledData[index].ledIndex);
+// 		}
+// 	} else {
+// 		digitalWrite(ledData[index].ledIndex, on);
+// 	}
+// }
+
+void setLed(uint index, bool value, int colr)
 {
 	sLedData ld = ledData[index];
-	digitalWrite(ld.ledIndex, value);
+
+	if(ld.isNeoPixel) {
+		if(value && colr > -1 && colr != ld.colorIndex) {
+			ld.colorIndex = colr;
+			// bitClear(pixBits, ld.ledIndex);
+		}
+		pixels.setPixelColor(ld.ledIndex, value ?
+			colors[ld.colorIndex] : colors[(int)colorIndex::BLACK]);
+		lastPixBits = pixBits;
+		if(value) {
+			bitSet(pixBits, ld.ledIndex);
+		} else {
+			bitClear(pixBits, ld.ledIndex);
+		}
+	} else {
+		digitalWrite(ld.ledIndex, value);
+	}
 }
 
-void processLedCmd(byte index, outState cmd, byte time)
+void processLedCmd(byte index, outState cmd, byte colorIndex, byte time)
 {
 	switch(cmd) {
 
 		case outState::ON:
 			stopTimer(index);
-			setLed(index, true);
+			setLed(index, true, colorIndex);
 			break;
 
 		case outState::OFF:
 			stopTimer(index);
-			setLed(index, false);
+			setLed(index, false, 0);
 			break;
 
 		case outState::FLASH:
-			setLed(index, true);
+			setLed(index, true, colorIndex);
 			startTimer(index, time * 100);
 			break;
 
 		case outState::ONESHOT:
-			setLed(index, true);
+			setLed(index, true, colorIndex);
 			startOneShot(index, time * 100);
 			break;
 	}
@@ -216,6 +306,10 @@ void processLedCmd(byte index, outState cmd, byte time)
 
 #pragma region I²C functions ---------------------------------------------------
 
+// const char *cmdNames[] = {
+// 	"RESET", "PORT", "SERVO", "SOUND", "LED", "MOTOR"
+// };
+
 void receiveEvent(int nBytes)
 {
 	byte cmd[BUFFER_LENGTH];
@@ -223,17 +317,28 @@ void receiveEvent(int nBytes)
 	for(int count = 0; count < BUFFER_LENGTH; count++) {
 		bool available = Wire.available();
 		cmd[count] = available ? Wire.read() : '\x0';
+		// if(available) {
+		// 	if(count == 0) {
+		// 		Serial.print(cmdNames[cmd[count] - 0x10]);
+		// 	} else {
+		// 		Serial.print(cmd[count]);
+		// 	}
+		// 	Serial.print(" ");
+		// }
 	}
+	// Serial.println("");
 
 	// Received commands
 
 	switch((byte)cmd[0]) {
 
 		case (byte)childCommands::RESET:
+			pixels.clear();
 			for(int i = 0; i < sizeof outputs; i++) {
  				digitalWrite(outputs[i], outputs[i] == lights ? HIGH : LOW);
 			}
 			myDFPlayer.stop();
+			// Serial.println("---------- RESET");
 			break;
 
 		case (byte)childCommands::PORT:
@@ -256,7 +361,7 @@ void receiveEvent(int nBytes)
 			break;
 
 		case (byte)childCommands::LED:
-			processLedCmd(cmd[1], (outState)cmd[2], cmd[3]);
+			processLedCmd(cmd[1], (outState)cmd[2], cmd[3], cmd[4]);
 			break;
 
 		case (byte)childCommands::MOTOR:
@@ -292,12 +397,16 @@ void soundInit()
 
 void openDoor()
 {
-	servo.write(OPEN_DOOR);
+	updateServo = true;
+	rbdServo.moveToDegrees(OPEN_DOOR);
+	servoTimer.start(SERVO_TIMER, AsyncDelay::MILLIS);
 }
 
 void closeDoor()
 {
-	servo.write(CLOSED_DOOR);
+	updateServo = true;
+	rbdServo.moveToDegrees(CLOSED_DOOR);
+	servoTimer.start(SERVO_TIMER, AsyncDelay::MILLIS);
 }
 
 #pragma endregion --------------------------------------------------------------
@@ -331,23 +440,29 @@ void testServo()
 	ulong ms = millis();
 
 	if(ms > tsLast + 2000) {
-		servo.write(tsOpen ? OPEN_DOOR : CLOSED_DOOR);
+		rbdServo.moveToDegrees(tsOpen ? OPEN_DOOR : CLOSED_DOOR);
 		Serial.println(tsOpen ? "open" : "closed");
 		tsOpen = !tsOpen;
 		tsLast = ms;
 	}
+
+	rbdServo.update();
 }
 
 uint cLed = 0;
+uint cCol = 1;
 
 void testAllLeds()
 {
-	setLed(cLed, false);
+	setLed(cLed, false, 0);
 	cLed = cLed == 8 ? 0 : cLed + 1;
-	setLed(cLed, true);
+	if(cLed == 8) {
+		cCol = cCol == 9 ? 1 : cCol + 1;
+	}
+	setLed(cLed, true, cCol);
 	Serial.print("LED #");
 	Serial.println(cLed);
-	delay(400);
+	delay(500);
 }
 
 #pragma endregion --------------------------------------------------------------
