@@ -10,8 +10,10 @@
 #include <Wire.h>
 
 #include "Simpletypes.h"
-#include "leds.h"
 #include "child.h"
+
+#include "pinball.h"
+#include "leds.h"
 #include "display.h"
 #include "sound.h"
 
@@ -26,42 +28,13 @@
 #define MAX_POWER_MS			50
 #define HOLD_PWM				40
 
-// Analog sensor thresholds
-
-// '10' as minimum prevents false readings when 19 V is off
-#define MIN_ANALOG_THRESHOLD	10
-#define LAUNCH_SENSOR_THRESHOLD 600
-#define HOLD_SENSOR_THRESHOLD	600
-
 // Time constants
 
 #define ANIMATION_TIME			250
 #define DEFAULT_DEBOUNCE		200
-#define DEFAULT_ONESHOT			500
+#define DEFAULT_ONESHOT			800
 #define ANALOG_DEBOUNCE			400
 #define NORMAL_FLASH			200
-
-// Arduino pins
-
-const byte leftButton = 2;
-const byte rightButton = 3;
-const byte leftOutlaneSensor = 4;
-const byte rightOutlaneSensor = 5;
-const byte rolloverSkillSensor = 6;
-const byte rollover3Sensor = 7;
-const byte rollover2Sensor = 8;
-const byte rollover1Sensor = 9;
-const byte leftFlipper = 10;
-const byte rightFlipper = 11;
-const byte ballLostSensor = 12;
-const byte stopMagnet = 13;
-
-const byte feederHomeSensor = A0;
-const byte ballNearHomeSensor = A1;
-const byte spinnerSensor = A2;
-const byte leftOrbitSensor = A3;
-const byte holdSensor = A6;
-const byte launchSensor = A7;
 
 // Inputs and outputs
 
@@ -338,8 +311,8 @@ void gameLoop()
 void gameStart()
 {
 	if(checkButtons()) {
-		DisplayStop();
-		DisplayShow("START");
+		Display::Stop();
+		Display::Show("START");
 		ballStart(true);
 	} else {
 		leds.waitAnimation(checkButtons);
@@ -438,7 +411,7 @@ void launched()
 		rolloverSkillMs = ballMs;
 		skillShotActive = true;
 		displayScore();
-		PlaySound(soundNames::CLANG);
+		Sound::Play(soundNames::CLANG);
 		gameState = gameStates::PLAYING;
 		Serial.println("----------------------------");
 		Serial.println("gameState: Playing");
@@ -510,7 +483,7 @@ void saveBall()
 	playerScore = lastScore;
 	// Serial.println("Saved");
 	showMultiString(replayMessages, NUMITEMS(replayMessages), &numSaves);
-	PlaySound(soundNames::BAMBOO);
+	Sound::Play(soundNames::BAMBOO);
 	gameState = gameStates::BALL_NEAR_HOME;
 	Serial.println("----------------------------");
 	Serial.println("gameState: Ball near home");
@@ -519,7 +492,7 @@ void saveBall()
 void nextBall()
 {
 	showMultiString(ballLostMessages, NUMITEMS(ballLostMessages), &numBalls);
-	PlaySound(soundNames::BOING);
+	Sound::Play(soundNames::BOING);
 	currentBall++;
 	ballSaves = 0;
 	extraBallState = extraBallStates::NOEXTRABALL;
@@ -543,7 +516,7 @@ void gameOver()
 {
 	// Serial.println("Game over -----------------------------------");
 	showMultiString(endGameMessages, NUMITEMS(endGameMessages), &numGames);
-	PlaySound(soundNames::WHISTLE);
+	Sound::Play(soundNames::WHISTLE);
 	delay(ENDGAME_TIME);
 	flashScore(END_FLASH_TIME);
 	delay(ENDSCORE_TIME);
@@ -612,7 +585,7 @@ bool sensorScore(uint port, ulong *msVar, bool positiveLogic,
 			*msVar = currentMs;
 			playerScore += points * multiplier;
 			displayScore();
-			PlaySound(soundNames::DING);
+			Sound::Play(soundNames::DING);
 			if(callback) {
 				callback(param);
 			}
@@ -646,7 +619,7 @@ bool analogScore(uint port, ulong *msVar, uint min, uint max, ulong points)
 		if(value >= min && value < max) {
 			*msVar = millis();
 			playerScore += points * multiplier;
-			PlaySound(soundNames::DING);
+			Sound::Play(soundNames::DING);
 			do {
 				driveLeftFlipper();
 				driveRightFlipper();
@@ -703,8 +676,8 @@ bool checkSkillShot(bool override)
 			extraBallState = extraBallStates::READY;
 			leds.On(childLeds::ROLLOVER_SKILL);
 		} else if(extraBallState == extraBallStates::READY) {
-			DisplayRotate(200);
-			DisplayShow("EXTRA BALL ");
+			Display::Rotate(200);
+			Display::Show("EXTRA BALL ");
 			Serial.println("Extra ball");
 			leds.Flash(childLeds::LEFT_OUTLANE, NORMAL_FLASH);
 			leds.Flash(childLeds::RIGHT_OUTLANE, NORMAL_FLASH);
@@ -851,47 +824,47 @@ bool checkButtons()
 
 void initDisplay()
 {
-	DisplayClear();
-	DisplayTest();
+	Display::Clear();
+	Display::Test();
 	delay(DISPLAY_TEST_TIME);
 }
 
 void startAnimation()
 {
-	DisplayRotate(DISPLAY_ROTATE_TIME);
-	DisplayShow("oooooo*oooooo******o******");
+	Display::Rotate(DISPLAY_ROTATE_TIME);
+	Display::Show("oooooo*oooooo******o******");
 	//            1234567890123456789012345678901
 }
 
 void newBallAnimation()
 {
-	DisplayClear();
-	DisplayRotate(120);
-	DisplayShow("_-@-_-@-");
+	Display::Clear();
+	Display::Rotate(120);
+	Display::Show("_-@-_-@-");
 }
 
 void displayBall()
 {
-	DisplayStop();
+	Display::Stop();
 	strcpy(displayBuffer, "BALL  ");
 	displayBuffer[5] = '0' + currentBall;
 	flashMessage(displayBuffer);
-	DisplayHold(1000);
+	Display::Hold(1000);
 }
 
 void displayScore()
 {
-	DisplayStop();
-	u2s(playerScore);
-	DisplayShow(displayBuffer);
+	Display::Stop();
+	Display::U2s(displayBuffer, playerScore);
+	Display::Show(displayBuffer);
 }
 
 void displayMultiplier()
 {
 	strcpy(displayBuffer, "MULT ");
 	displayBuffer[5] = '0' + multiplier;
-	DisplayShow(displayBuffer);
-	DisplayHold(1000);
+	Display::Show(displayBuffer);
+	Display::Hold(1000);
 	Serial.print("*** Multiplier: ");
 	Serial.println(multiplier);
 }
@@ -900,28 +873,18 @@ void displayHold()
 {
 	strcpy(displayBuffer, "HOLD  ");
 	displayBuffer[5] = '1' + stopSensorHits;
-	DisplayShow(displayBuffer);
-	DisplayHold(700);
+	Display::Show(displayBuffer);
+	Display::Hold(700);
 	Serial.print("Hold: ");
 	Serial.println(stopSensorHits);
 }
 
 void flashScore(uint speed)
 {
-	u2s(playerScore);
+	Display::U2s(displayBuffer, playerScore);
 	flashMessage(displayBuffer, speed);
 	// display.Flash(speed);
 	// display.Show(displayBuffer);
-}
-
-void u2s(unsigned long value)
-{
-	// https://forum.arduino.cc/t/right-justify/93157/10
-
-	for(int i = DISPLAYCHARS - 1; i >= 0; i--) {
-		displayBuffer[i] = (value == 0 && i != DISPLAYCHARS - 1) ? ' ' : '0' + value % 10;
-		value /= 10;
-	}
 }
 
 void flashMessage(char *msg)
@@ -931,14 +894,14 @@ void flashMessage(char *msg)
 
 void flashMessage(char *msg, uint speed)
 {
-	DisplayStop();
-	DisplayFlash(speed);
-	DisplayShow(msg);
+	Display::Stop();
+	Display::Flash(speed);
+	Display::Show(msg);
 }
 
 void showMultiString(const char *msg[], uint nItems, uint *index)
 {
-	DisplayShow((char *)msg[*index % nItems]);
+	Display::Show((char *)msg[*index % nItems]);
 	(*index)++;
 }
 
@@ -1028,131 +991,6 @@ void openDoor()
 {
 	i2c.Cmd(CHILD_ADDRESS, (int)childCommands::SERVO, (int)servoCmd::OPEN);
 	delay(SERVO_TIMER);
-}
-
-#pragma endregion --------------------------------------------------------------
-
-#pragma region Test functions --------------------------------------------------
-
-// Sensor state variables
-
-bool leftButtonState = true;
-bool rightButtonState = true;
-bool leftOutlaneSensorState = true;
-bool rightOutlaneSensorState = true;
-bool rolloverSkillSensorState = true;
-bool rollover3SensorState = true;
-bool rollover2SensorState = true;
-bool rollover1SensorState = true;
-bool ballLostSensorState = true;
-bool feederHomeSensorState = true;
-bool ballNearHomeSensorState = true;
-bool spinnerSensorState = true;
-bool leftOrbitSensorState = true;
-
-void testInputs()
-{
-	// Digital sensors
-
-	testSensor(leftButton, &leftButtonState, "Left button");
-	testSensor(rightButton, &rightButtonState, "Right button");
-	testSensor(leftOutlaneSensor, &leftOutlaneSensorState, "Left outlane");
-	testSensor(rightOutlaneSensor, &rightOutlaneSensorState, "Right outlane");
-	testSensor(rolloverSkillSensor, &rolloverSkillSensorState, "Skill shot rollover");
-	testSensor(rollover3Sensor, &rollover3SensorState, "Rollover 3");
-	testSensor(rollover2Sensor, &rollover2SensorState, "Rollover 2");
-	testSensor(rollover1Sensor, &rollover1SensorState, "Rollover 1");
-	testSensor(ballLostSensor, &ballLostSensorState, "Ball lost");
-	testSensor(feederHomeSensor, &feederHomeSensorState, "Feeder at home");
-	testSensor(ballNearHomeSensor, &ballNearHomeSensorState, "Ball near home");
-	testSensor(spinnerSensor, &spinnerSensorState, "Spinner");
-	testSensor(leftOrbitSensor, &leftOrbitSensorState, "Left orbit");
-
-	// Analog sensors
-
-	testAnalogSensor(holdSensor, MIN_ANALOG_THRESHOLD, HOLD_SENSOR_THRESHOLD, "Hold");
-	testAnalogSensor(launchSensor, MIN_ANALOG_THRESHOLD, LAUNCH_SENSOR_THRESHOLD, "Ball launched");
-}
-
-void testLeds()
-{
-	leds.Flash(childLeds::LEFT_ORBIT, 100);
-	leds.Flash(childLeds::ROLLOVER1, 100);
-	leds.OneShot(childLeds::ROLLOVER2, 100);
-
-	delay(1000);
-
-	leds.Off(childLeds::LEFT_ORBIT);
-	leds.Off(childLeds::ROLLOVER1);
-
-	delay(1000);
-}
-
-uint cLed = 0;
-uint cCol = 1;
-
-void testAllLeds()
-{
-	DisplayStop();
-	leds.Off((childLeds)cLed);
-	cLed = cLed == 8 ? 0 : cLed + 1;
-	if(cLed == 8) {
-		cCol = cCol == 9 ? 1 : cCol + 1;
-	}
-	leds.On((childLeds)cLed);
-	delay(500);
-	DisplayClear();
-	u2s(cLed);
-	DisplayShow(displayBuffer);
-}
-
-void testSensor(byte sensor, bool *last, char *name)
-{
-	bool state = digitalRead(sensor);
-
-	if(state != *last) {
-		Serial.print(name);
-		Serial.print(": ");
-		Serial.println(state);
-		*last = state;
-	}
-}
-
-void testAnalogSensor(byte sensor, uint min, uint max, char *name)
-{
-	uint value = analogRead(sensor);
-
-	if(value >= min && value < max) {
-		Serial.print(name);
-		Serial.print(": ");
-		Serial.println(value);
-		delay(50);
-	}
-}
-
-void analogSensorTestLoop()
-{
-	Serial.print("Hold: ");
-	Serial.print(analogRead(holdSensor));
-	delay(50);
-	Serial.print(" / Launch: ");
-	Serial.println(analogRead(launchSensor));
-	delay(50);
-}
-
-void testSounds()
-{
-	for(int i = soundNames::DING; i <= soundNames::BAMBOO; i++) {
-		PlaySound(i);
-		Serial.print("Sound #");
-		Serial.println(i);
-		DisplayStop();
-		u2s(i);
-		DisplayShow(displayBuffer);
-		leds.On((childLeds)(i - 1));
-		delay(2000);
-		leds.Off((childLeds)(i - 1));
-	}
 }
 
 #pragma endregion --------------------------------------------------------------

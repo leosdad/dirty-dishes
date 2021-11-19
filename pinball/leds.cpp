@@ -14,19 +14,19 @@
 void Leds::On(childLeds led)
 {
 	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led,
-		(byte)outState::ON, 1);
+		(byte)outState::ON, 0);
 }
 
 void Leds::Flash(childLeds led, uint time)
 {
 	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led,
-		(byte)outState::FLASH, 1, time / 100);
+		(byte)outState::FLASH, time / 100);
 }
 
 void Leds::OneShot(childLeds led, uint time)
 {
 	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led,
-		(byte)outState::ONESHOT, 1, time / 100);
+		(byte)outState::ONESHOT, time / 100);
 }
 
 void Leds::Off(childLeds led)

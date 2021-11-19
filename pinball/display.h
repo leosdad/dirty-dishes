@@ -7,21 +7,25 @@
 
 #include <Arduino.h>
 #include <FtModules.h>
-
 #include "Simpletypes.h"
-// #include "child.h"
 
 // Constants for other modules
 
 #define SEVENSEGDISPLAY_ADR		0x09
 #define DISPLAYCHARS			6
 
-void DisplayClear();
-void DisplayTest();
-void DisplayShow(char *str);
-void DisplayHold(uint ms);
-void DisplayFlash(uint ms);
-void DisplayRotate(uint ms);
-void DisplayStop();
+class Display
+{
+  public:
+	static void Clear();
+	static void Test();
+	static void Show(char *str);
+	static void Hold(uint ms);
+	static void Flash(uint ms);
+	static void Rotate(uint ms);
+	static void Stop();
+	static void U2s(char *buffer, unsigned long value);
+};
+
 
 #endif // display_h

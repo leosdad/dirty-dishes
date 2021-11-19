@@ -10,6 +10,10 @@
 
 extern "C" FtModules::I2C i2c;
 
-void PlaySound(byte soundIndex);
+class Sound
+{
+  public:
+	static void Play(byte soundIndex);
+};
 
 #endif // sound_h
