@@ -1,21 +1,20 @@
 // -----------------------------------------------------------------------------
 
-// Dirty Dishes pinball: Test functions
+// Dirty Dishes pinball: Tests
 // Rubem Pechansky 2021
 
 // -----------------------------------------------------------------------------
 
-
 #include <Arduino.h>
 #include <FtModules.h>
-#include <Wire.h>
 
+#include "tests.h"
 #include "pinball.h"
-#include "leds.h"
 #include "display.h"
 #include "sound.h"
+#include "servo.h"
 
-#pragma region Test methods --------------------------------------------------
+#pragma region Variables -------------------------------------------------------
 
 // Sensor state variables
 
@@ -33,73 +32,26 @@ bool ballNearHomeSensorState = true;
 bool spinnerSensorState = true;
 bool leftOrbitSensorState = true;
 
-void testLeds()
-{
-	leds.Flash(childLeds::LEFT_ORBIT, 100);
-	leds.Flash(childLeds::ROLLOVER1, 100);
-	leds.OneShot(childLeds::ROLLOVER2, 100);
+uint nLedTest = 0;
+Servo servoTest;
 
-	delay(1000);
+#pragma endregion --------------------------------------------------------------
 
-	leds.Off(childLeds::LEFT_ORBIT);
-	leds.Off(childLeds::ROLLOVER1);
+#pragma region Public methods --------------------------------------------------
 
-	delay(1000);
-}
-
-uint cLed = 0;
-uint cCol = 1;
-
-void testAllLeds()
+void Tests::Leds()
 {
 	Display::Stop();
-	leds.Off((childLeds)cLed);
-	cLed = cLed == 8 ? 0 : cLed + 1;
-	if(cLed == 8) {
-		cCol = cCol == 9 ? 1 : cCol + 1;
-	}
-	leds.On((childLeds)cLed);
+	leds.Off((childLeds)nLedTest);
+	nLedTest = nLedTest == NLEDS - 1 ? 0 : nLedTest + 1;
+	leds.On((childLeds)nLedTest);
 	delay(500);
 	Display::Clear();
-	Display::U2s(displayBuffer, cLed);
+	Display::U2s(displayBuffer, nLedTest);
 	Display::Show(displayBuffer);
 }
 
-void testSensor(byte sensor, bool *last, char *name)
-{
-	bool state = digitalRead(sensor);
-
-	if(state != *last) {
-		Serial.print(name);
-		Serial.print(": ");
-		Serial.println(state);
-		*last = state;
-	}
-}
-
-void testAnalogSensor(byte sensor, uint min, uint max, char *name)
-{
-	uint value = analogRead(sensor);
-
-	if(value >= min && value < max) {
-		Serial.print(name);
-		Serial.print(": ");
-		Serial.println(value);
-		delay(50);
-	}
-}
-
-void analogSensorTestLoop()
-{
-	Serial.print("Hold: ");
-	Serial.print(analogRead(holdSensor));
-	delay(50);
-	Serial.print(" / Launch: ");
-	Serial.println(analogRead(launchSensor));
-	delay(50);
-}
-
-void testSounds()
+void Tests::Sounds()
 {
 	for(int i = soundNames::DING; i <= soundNames::BAMBOO; i++) {
 		Sound::Play(i);
@@ -114,28 +66,74 @@ void testSounds()
 	}
 }
 
-void testInputs()
+void Tests::Inputs()
 {
 	// Digital sensors
 
-	testSensor(leftButton, &leftButtonState, "Left button");
-	testSensor(rightButton, &rightButtonState, "Right button");
-	testSensor(leftOutlaneSensor, &leftOutlaneSensorState, "Left outlane");
-	testSensor(rightOutlaneSensor, &rightOutlaneSensorState, "Right outlane");
-	testSensor(rolloverSkillSensor, &rolloverSkillSensorState, "Skill shot rollover");
-	testSensor(rollover3Sensor, &rollover3SensorState, "Rollover 3");
-	testSensor(rollover2Sensor, &rollover2SensorState, "Rollover 2");
-	testSensor(rollover1Sensor, &rollover1SensorState, "Rollover 1");
-	testSensor(ballLostSensor, &ballLostSensorState, "Ball lost");
-	testSensor(feederHomeSensor, &feederHomeSensorState, "Feeder at home");
-	testSensor(ballNearHomeSensor, &ballNearHomeSensorState, "Ball near home");
-	testSensor(spinnerSensor, &spinnerSensorState, "Spinner");
-	testSensor(leftOrbitSensor, &leftOrbitSensorState, "Left orbit");
+	testDigitalSensor(leftButton, &leftButtonState, "Left button");
+	testDigitalSensor(rightButton, &rightButtonState, "Right button");
+	testDigitalSensor(leftOutlaneSensor, &leftOutlaneSensorState, "Left outlane");
+	testDigitalSensor(rightOutlaneSensor, &rightOutlaneSensorState, "Right outlane");
+	testDigitalSensor(rolloverSkillSensor, &rolloverSkillSensorState, "Skill shot rollover");
+	testDigitalSensor(rollover3Sensor, &rollover3SensorState, "Rollover 3");
+	testDigitalSensor(rollover2Sensor, &rollover2SensorState, "Rollover 2");
+	testDigitalSensor(rollover1Sensor, &rollover1SensorState, "Rollover 1");
+	testDigitalSensor(ballLostSensor, &ballLostSensorState, "Ball lost");
+	testDigitalSensor(feederHomeSensor, &feederHomeSensorState, "Feeder at home");
+	testDigitalSensor(ballNearHomeSensor, &ballNearHomeSensorState, "Ball near home");
+	testDigitalSensor(spinnerSensor, &spinnerSensorState, "Spinner");
+	testDigitalSensor(leftOrbitSensor, &leftOrbitSensorState, "Left orbit");
 
 	// Analog sensors
 
 	testAnalogSensor(holdSensor, MIN_ANALOG_THRESHOLD, HOLD_SENSOR_THRESHOLD, "Hold");
 	testAnalogSensor(launchSensor, MIN_ANALOG_THRESHOLD, LAUNCH_SENSOR_THRESHOLD, "Ball launched");
+}
+
+void Tests::AnalogSensors()
+{
+	Serial.print("Hold: ");
+	Serial.print(analogRead(holdSensor));
+	delay(50);
+	Serial.print(" / Launch: ");
+	Serial.println(analogRead(launchSensor));
+	delay(50);
+}
+
+void Tests::Servo()
+{
+	servoTest.OpenDoor();
+	delay(500);
+	servoTest.CloseDoor();
+	delay(500);
+}
+
+#pragma endregion --------------------------------------------------------------
+
+#pragma region Private methods -------------------------------------------------
+
+void Tests::testDigitalSensor(byte sensor, bool *last, char *name)
+{
+	bool state = digitalRead(sensor);
+
+	if(state != *last) {
+		Serial.print(name);
+		Serial.print(": ");
+		Serial.println(state);
+		*last = state;
+	}
+}
+
+void Tests::testAnalogSensor(byte sensor, uint min, uint max, char *name)
+{
+	uint value = analogRead(sensor);
+
+	if(value >= min && value < max) {
+		Serial.print(name);
+		Serial.print(": ");
+		Serial.println(value);
+		delay(50);
+	}
 }
 
 #pragma endregion --------------------------------------------------------------

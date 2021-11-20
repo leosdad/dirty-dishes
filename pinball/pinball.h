@@ -10,19 +10,18 @@
 
 #include <Arduino.h>
 #include <FtModules.h>
+
 #include "Simpletypes.h"
 #include "child.h"
 
 #include "leds.h"
-#include "display.h"
-#include "sound.h"
 
-// ---------------------------------------------------------- Hardware constants
+// Hardware constants
 
 #define SEVENSEGDISPLAY_ADR		0x09
 #define DISPLAYCHARS			6
 
-// Arduino pins
+// Arduino pin assignments
 
 const byte leftButton = 2;
 const byte rightButton = 3;
@@ -46,7 +45,7 @@ const byte launchSensor = A7;
 
 // Analog sensor thresholds
 
-#define MIN_ANALOG_THRESHOLD	10		// '10' as minimum prevents false readings when 19 V is off
+#define MIN_ANALOG_THRESHOLD	10		// Prevent false readings when 19 V off
 #define LAUNCH_SENSOR_THRESHOLD 600
 #define HOLD_SENSOR_THRESHOLD	600
 
@@ -57,7 +56,7 @@ const byte launchSensor = A7;
 #define RIGHT_BUTTON_ON	 (!digitalRead(rightButton))
 #define RIGHT_BUTTON_OFF (digitalRead(rightButton))
 
-// ------------------------------------------------------------ Global variables
+// Global variables
 
 extern "C" Leds leds;
 extern "C" char displayBuffer[];

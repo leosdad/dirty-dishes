@@ -8,13 +8,14 @@
 #include <Wire.h>
 
 #include "pinball.h"
+#include "general.h"
+#include "tests.h"
 #include "flippers.h"
 #include "leds.h"
 #include "display.h"
 #include "sound.h"
 #include "servo.h"
 #include "motor.h"
-#include "general.h"
 
 #pragma region Hardware constants ----------------------------------------------
 
@@ -24,11 +25,8 @@
 
 // Time constants
 
-#define ANIMATION_TIME			250
 #define DEFAULT_DEBOUNCE		200
-#define DEFAULT_ONESHOT			800
 #define ANALOG_DEBOUNCE			400
-#define NORMAL_FLASH			200
 
 // Inputs and outputs
 
@@ -78,6 +76,8 @@ const byte holdThreshold = 3; // Number of stop sensor hits to activate hold
 #define END_FLASH_TIME			250
 #define SLOW_FLASH_TIME			600
 #define BALL_LOST_TIMEOUT		1700
+#define DEFAULT_ONESHOT			800
+#define NORMAL_FLASH			200
 
 // Points
 
@@ -220,12 +220,11 @@ void loop()
 {
 	gameLoop();
 
-	// leds.waitAnimation(checkButtons);
-	// testAllLeds();
-	// leds.redFlashes(100); delay(2000); leds.allOff(); delay(2000);
-	// testSounds();
-	// testInputs();
-	// analogSensorTestLoop();
+	// Tests::Leds();
+	// Tests::Sounds();
+	// Tests::Inputs();
+	// Tests::AnalogSensors();
+	// Tests::Servo();
 }
 
 void gameLoop()

@@ -17,12 +17,12 @@
 
 void Motor::FeedBall()
 {
-	i2c.Cmd(CHILD_ADDRESS, (int)childCommands::MOTOR, HIGH);
+	FtModules::I2C::Cmd(CHILD_ADDRESS, (int)childCommands::MOTOR, HIGH);
 	delay(FEEDBALL_TIME);
 	while(digitalRead(feederHomeSensor)) {
 		delay(5);
 	}
-	i2c.Cmd(CHILD_ADDRESS, (int)childCommands::MOTOR, LOW);
+	FtModules::I2C::Cmd(CHILD_ADDRESS, (int)childCommands::MOTOR, LOW);
 }
 
 #pragma endregion --------------------------------------------------------------
