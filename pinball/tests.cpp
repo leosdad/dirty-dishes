@@ -60,9 +60,9 @@ void Tests::Sounds()
 		Display::Stop();
 		Display::U2s(displayBuffer, i);
 		Display::Show(displayBuffer);
-		leds.On((childLeds)(i - 1));
+		// leds.On((childLeds)(i - 1));
 		delay(2000);
-		leds.Off((childLeds)(i - 1));
+		// leds.Off((childLeds)(i - 1));
 	}
 }
 
@@ -103,9 +103,9 @@ void Tests::AnalogSensors()
 void Tests::Servo()
 {
 	servoTest.OpenDoor();
-	delay(500);
+	delay(1000);
 	servoTest.CloseDoor();
-	delay(500);
+	delay(1000);
 }
 
 #pragma endregion --------------------------------------------------------------
