@@ -1,5 +1,5 @@
 /*
-  leds.h
+  display.h
 */
 
 #ifndef display_h

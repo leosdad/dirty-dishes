@@ -14,12 +14,10 @@
 #include "display.h"
 #include "sound.h"
 
-// ------------------------------------------------- Constants for other modules
+// ---------------------------------------------------------- Hardware constants
 
 #define SEVENSEGDISPLAY_ADR		0x09
 #define DISPLAYCHARS			6
-
-// ---------------------------------------------------------- Hardware constants
 
 // Arduino pins
 
@@ -45,15 +43,22 @@ const byte launchSensor = A7;
 
 // Analog sensor thresholds
 
-// '10' as minimum prevents false readings when 19 V is off
-#define MIN_ANALOG_THRESHOLD	10
+#define MIN_ANALOG_THRESHOLD	10		// '10' as minimum prevents false readings when 19 V is off
 #define LAUNCH_SENSOR_THRESHOLD 600
 #define HOLD_SENSOR_THRESHOLD	600
+
+// Sensor macros
+
+#define LEFT_BUTTON_ON	 (!digitalRead(leftButton))
+#define LEFT_BUTTON_OFF	 (digitalRead(leftButton))
+#define RIGHT_BUTTON_ON	 (!digitalRead(rightButton))
+#define RIGHT_BUTTON_OFF (digitalRead(rightButton))
 
 // ------------------------------------------------------------ Global variables
 
 extern "C" FtModules::I2C i2c;
 extern "C" Leds leds;
 extern "C" char displayBuffer[];
+extern "C" unsigned long currentMs;
 
 #endif // pinball_h

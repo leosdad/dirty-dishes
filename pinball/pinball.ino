@@ -5,14 +5,10 @@
 
 // -----------------------------------------------------------------------------
 
-#include <Arduino.h>
-#include <FtModules.h>
 #include <Wire.h>
 
-#include "Simpletypes.h"
-#include "child.h"
-
 #include "pinball.h"
+#include "flippers.h"
 #include "leds.h"
 #include "display.h"
 #include "sound.h"
@@ -22,11 +18,6 @@
 // Baud rate
 
 #define BAUDRATE				57600
-
-// Parameters for L298N and 19.5 VDC power supply
-
-#define MAX_POWER_MS			50
-#define HOLD_PWM				40
 
 // Time constants
 
@@ -56,11 +47,6 @@ const byte outputs[] = {leftFlipper, rightFlipper, stopMagnet};
 #pragma region Macros ----------------------------------------------------------
 
 // Sensor macros
-
-#define LEFT_BUTTON_ON	 (!digitalRead(leftButton))
-#define LEFT_BUTTON_OFF	 (digitalRead(leftButton))
-#define RIGHT_BUTTON_ON	 (!digitalRead(rightButton))
-#define RIGHT_BUTTON_OFF (digitalRead(rightButton))
 
 #define IS_BALL_LOST	 (digitalRead(ballLostSensor))
 #define IS_SPINNER_UP	 (!digitalRead(spinnerSensor))
@@ -114,16 +100,6 @@ const char *replayMessages[] = {"REPLAY", "AGAIN", "LUCKY", "SAVED"};
 
 #pragma region Enums -----------------------------------------------------------
 
-// Flipper states
-
-enum class flipperStates
-{
-	IDLE = 0,
-	STROKE,
-	HOLD,
-	HOLDING,
-};
-
 // Game states
 
 enum class gameStates
@@ -150,15 +126,10 @@ enum class extraBallStates
 
 #pragma region Hardware variables ----------------------------------------------
 
-flipperStates leftFlipperState = flipperStates::IDLE;
-flipperStates rightFlipperState = flipperStates::IDLE;
-
 bool spinnerState = false;
 
 // Time variables
 
-ulong leftButtonPreviousMs;
-ulong rightPreviousMs;
 ulong leftOrbitMs = 0;
 ulong stopMagMs = 0;
 ulong spinnerMs = 0;
@@ -353,8 +324,8 @@ void launched()
 	currentMs = millis();
 	bool launch = false;
 
-	driveLeftFlipper();
-	driveRightFlipper();
+	Flippers::Left();
+	Flippers::Right();
 
 	if(analogRead(launchSensor) < LAUNCH_SENSOR_THRESHOLD) {
 		Serial.println("Launched by launch sensor");
@@ -422,8 +393,8 @@ void playing()
 {
 	currentMs = millis();
 
-	driveLeftFlipper();
-	driveRightFlipper();
+	Flippers::Left();
+	Flippers::Right();
 
 	checkSpinner();
 	checkSkillShot(false);
@@ -432,14 +403,14 @@ void playing()
 	checkHold();
 
 	if(checkOutlanes()) {
-		resetFlippers();
+		Flippers::Reset();
 		gameState = gameStates::NO_MORE_POINTS;
 		Serial.println("----------------------------");
 		Serial.println("gameState: No more points");
 	}
 
 	if(IS_BALL_LOST) {
-		resetFlippers();
+		Flippers::Reset();
 		gameState = gameStates::BALL_LOST;
 		Serial.println("----------------------------");
 		Serial.println("gameState: Ball lost");
@@ -621,8 +592,8 @@ bool analogScore(uint port, ulong *msVar, uint min, uint max, ulong points)
 			playerScore += points * multiplier;
 			Sound::Play(soundNames::DING);
 			do {
-				driveLeftFlipper();
-				driveRightFlipper();
+				Flippers::Left();
+				Flippers::Right();
 				value = analogRead(port);
 			} while ((value >= min && value < max) && (millis() < *msVar + 2 * ANALOG_DEBOUNCE));
 			return true;
@@ -908,68 +879,6 @@ void showMultiString(const char *msg[], uint nItems, uint *index)
 #pragma endregion --------------------------------------------------------------
 
 #pragma region Output and actuator functions -----------------------------------
-
-void driveLeftFlipper()
-{
-	if(leftFlipperState == flipperStates::IDLE) {
-		if(LEFT_BUTTON_ON) {
-			digitalWrite(leftFlipper, HIGH);
-			leftButtonPreviousMs = currentMs;
-			leftFlipperState = flipperStates::STROKE;
-		}
-	} else if(leftFlipperState == flipperStates::STROKE) {
-		if(LEFT_BUTTON_OFF) {
-			digitalWrite(leftFlipper, LOW);
-			leftFlipperState = flipperStates::IDLE;
-		} else if(currentMs - leftButtonPreviousMs >= MAX_POWER_MS) {
-			leftFlipperState = flipperStates::HOLD;
-		}
-	} else if(leftFlipperState == flipperStates::HOLD) {
-		if(LEFT_BUTTON_ON) {
-			analogWrite(leftFlipper, HOLD_PWM);
-		}
-		leftFlipperState = flipperStates::HOLDING;
-	} else if(leftFlipperState == flipperStates::HOLDING) {
-		if(LEFT_BUTTON_OFF) {
-			digitalWrite(leftFlipper, LOW);
-			leftFlipperState = flipperStates::IDLE;
-		}
-	}
-}
-
-void driveRightFlipper()
-{
-	if(rightFlipperState == flipperStates::IDLE) {
-		if(RIGHT_BUTTON_ON) {
-			digitalWrite(rightFlipper, HIGH);
-			rightPreviousMs = currentMs;
-			rightFlipperState = flipperStates::STROKE;
-		}
-	} else if(rightFlipperState == flipperStates::STROKE) {
-		if(RIGHT_BUTTON_OFF) {
-			digitalWrite(rightFlipper, LOW);
-			rightFlipperState = flipperStates::IDLE;
-		} else if(currentMs - rightPreviousMs >= MAX_POWER_MS) {
-			rightFlipperState = flipperStates::HOLD;
-		}
-	} else if(rightFlipperState == flipperStates::HOLD) {
-		if(RIGHT_BUTTON_ON) {
-			analogWrite(rightFlipper, HOLD_PWM);
-		}
-		rightFlipperState = flipperStates::HOLDING;
-	} else if(rightFlipperState == flipperStates::HOLDING) {
-		if(RIGHT_BUTTON_OFF) {
-			digitalWrite(rightFlipper, LOW);
-			rightFlipperState = flipperStates::IDLE;
-		}
-	}
-}
-
-void resetFlippers()
-{
-	digitalWrite(leftFlipper, LOW);
-	digitalWrite(rightFlipper, LOW);
-}
 
 void feedBall()
 {
