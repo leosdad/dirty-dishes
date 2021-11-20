@@ -7,7 +7,27 @@
 
 #include "display.h"
 
+#pragma region Constants -------------------------------------------------------
+
+#define DISPLAY_INIT_TIME		200
+
+#pragma endregion --------------------------------------------------------------
+
 #pragma region Methods ---------------------------------------------------------
+
+void Display::Init()
+{
+	Display::Clear();
+	Display::Test();
+	delay(DISPLAY_INIT_TIME);
+}
+
+void Display::FlashMessage(char *str, uint speed)
+{
+	Display::Stop();
+	Display::Flash(speed);
+	Display::Show(str);
+}
 
 void Display::Clear()
 {

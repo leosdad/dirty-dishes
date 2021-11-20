@@ -69,7 +69,6 @@ const byte holdThreshold = 3; // Number of stop sensor hits to activate hold
 #define ENDGAME_TIME			1500
 #define ENDSCORE_TIME			1500
 #define BALL_NEAR_HOME_TIME		400
-#define DISPLAY_TEST_TIME		200
 #define DISPLAY_ROTATE_TIME		200
 #define HOLD_TIME				5000
 #define RELEASE_TIME			500		// Must be enough to let the ball go
@@ -127,8 +126,6 @@ enum class extraBallStates
 
 #pragma region Hardware variables ----------------------------------------------
 
-bool spinnerState = false;
-
 // Time variables
 
 ulong leftOrbitMs = 0;
@@ -145,7 +142,7 @@ ulong ballMs = 0;
 ulong multiplierMs = ULONG_MAX;
 
 unsigned long currentMs;
-
+bool spinnerState = false;
 char displayBuffer[DISPLAYCHARS];
 
 Servo servo;
@@ -170,7 +167,7 @@ uint numSaves = 0;
 
 bool rollovers[3] = {false, false, false};
 bool skillShotActive = false;
-bool hold = false;
+bool holdActive = false;
 
 ulong playerScore = 0;
 ulong lastScore = 0;
@@ -188,7 +185,7 @@ void setup()
 
 	setPinModes();
 	resetChild();
-	initDisplay();
+	Display::Init();
 
 	Serial.println("");
 	Serial.println("Started");
@@ -299,7 +296,7 @@ void ballStart(bool resetGame)
 	motor.FeedBall();
 	startBall();
 	skillShotActive = false;
-	hold = false;
+	holdActive = false;
 	// leds.Off(childLeds::HOLD);
 	stopSensorHits = 0;
 	if(resetGame) {
@@ -491,9 +488,7 @@ void gameOver()
 	// Serial.println("Game over -----------------------------------");
 	showMultiString(endGameMessages, NUMITEMS(endGameMessages), &numGames);
 	Sound::Play(soundNames::WHISTLE);
-	delay(ENDGAME_TIME);
 	flashScore(END_FLASH_TIME);
-	delay(ENDSCORE_TIME);
 	preStartGame();
 	gameState = gameStates::GAME_START;
 	Serial.println("----------------------------");
@@ -739,7 +734,7 @@ bool checkHold()
 {
 	bool hit = false;
 
-	if(hold && currentMs > stopMagMs + RELEASE_TIME) {
+	if(holdActive && currentMs > stopMagMs + RELEASE_TIME) {
 		if(analogScore(holdSensor, &holdSensorMs, MIN_ANALOG_THRESHOLD,
 			HOLD_SENSOR_THRESHOLD, HOLD_POINTS)) {
 			leds.OneShot(childLeds::HOLD, DEFAULT_ONESHOT);
@@ -760,23 +755,23 @@ bool checkHold()
 			// display.Show(displayBuffer);
 
 			if(stopSensorHits + 1 == holdThreshold) {
-				hold = true;
+				holdActive = true;
 				leds.On(childLeds::HOLD);
 				digitalWrite(stopMagnet, HIGH);
 				stopMagMs = currentMs;
 			} else {
-				if(!hold) {
+				if(!holdActive) {
 					stopSensorHits++;
 				}
 			}
 		}
 	}
-	// if(hold && (currentMs > stopMagMs + RELEASE_TIME)) {
+	// if(holdActive && (currentMs > stopMagMs + RELEASE_TIME)) {
 	// 	digitalWrite(stopMagnet, HIGH);
 	// }
 
-	if(hold && (currentMs > stopMagMs + RELEASE_TIME + HOLD_TIME)) {
-		hold = false;
+	if(holdActive && (currentMs > stopMagMs + RELEASE_TIME + HOLD_TIME)) {
+		holdActive = false;
 		stopSensorHits = 0;
 		stopMagMs = ULONG_MAX;
 		digitalWrite(stopMagnet, LOW);
@@ -795,13 +790,6 @@ bool checkButtons()
 #pragma endregion --------------------------------------------------------------
 
 #pragma region Display functions -----------------------------------------------
-
-void initDisplay()
-{
-	Display::Clear();
-	Display::Test();
-	delay(DISPLAY_TEST_TIME);
-}
 
 void startAnimation()
 {
@@ -822,15 +810,8 @@ void displayBall()
 	Display::Stop();
 	strcpy(displayBuffer, "BALL  ");
 	displayBuffer[5] = '0' + currentBall;
-	flashMessage(displayBuffer);
+	Display::FlashMessage(displayBuffer, SLOW_FLASH_TIME);
 	Display::Hold(1000);
-}
-
-void displayScore()
-{
-	Display::Stop();
-	Display::U2s(displayBuffer, playerScore);
-	Display::Show(displayBuffer);
 }
 
 void displayMultiplier()
@@ -853,24 +834,19 @@ void displayHold()
 	Serial.println(stopSensorHits);
 }
 
-void flashScore(uint speed)
-{
-	Display::U2s(displayBuffer, playerScore);
-	flashMessage(displayBuffer, speed);
-	// display.Flash(speed);
-	// display.Show(displayBuffer);
-}
-
-void flashMessage(char *msg)
-{
-	flashMessage(msg, SLOW_FLASH_TIME);
-}
-
-void flashMessage(char *msg, uint speed)
+void displayScore()
 {
 	Display::Stop();
-	Display::Flash(speed);
-	Display::Show(msg);
+	Display::U2s(displayBuffer, playerScore);
+	Display::Show(displayBuffer);
+}
+
+void flashScore(uint speed)
+{
+	delay(ENDGAME_TIME);
+	Display::U2s(displayBuffer, playerScore);
+	Display::FlashMessage(displayBuffer, speed);
+	delay(ENDSCORE_TIME);
 }
 
 void showMultiString(const char *msg[], uint nItems, uint *index)

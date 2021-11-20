@@ -17,6 +17,8 @@
 class Display
 {
   public:
+	static void Init();
+	static void FlashMessage(char *str, uint speed);
 	static void Clear();
 	static void Test();
 	static void Show(char *str);
