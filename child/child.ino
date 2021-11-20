@@ -13,8 +13,8 @@
 #include <SoftwareSerial.h>
 #include <DFRobotDFPlayerMini.h>
 
-#include <Simpletypes.h>
-#include <child.h>
+#include "Simpletypes.h"
+#include "pb_child.h"
 
 #pragma region Constants -------------------------------------------------------
 

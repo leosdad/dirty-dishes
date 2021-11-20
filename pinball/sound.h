@@ -10,7 +10,7 @@
 
 #include <Arduino.h>
 #include <FtModules.h>
-#include "child.h"
+#include "pb_child.h"
 
 class Sound
 {

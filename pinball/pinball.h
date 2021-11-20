@@ -12,7 +12,7 @@
 #include <FtModules.h>
 
 #include "Simpletypes.h"
-#include "child.h"
+#include "pb_child.h"
 
 #include "leds.h"
 
