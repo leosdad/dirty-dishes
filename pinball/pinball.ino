@@ -12,6 +12,8 @@
 #include "leds.h"
 #include "display.h"
 #include "sound.h"
+#include "servo.h"
+#include "motor.h"
 
 #pragma region Hardware constants ----------------------------------------------
 
@@ -69,7 +71,6 @@ const byte holdThreshold = 3; // Number of stop sensor hits to activate hold
 #define BALL_NEAR_HOME_TIME		400
 #define DISPLAY_TEST_TIME		200
 #define DISPLAY_ROTATE_TIME		200
-#define FEEDBALL_TIME			100
 #define HOLD_TIME				5000
 #define RELEASE_TIME			500		// Must be enough to let the ball go
 #define MULTIPLIER_RESET_TIME	1500
@@ -147,10 +148,12 @@ unsigned long currentMs;
 
 char displayBuffer[DISPLAYCHARS];
 
+Servo servo;
 FtModules::I2C i2c;
 Leds leds;
+Motor motor;
 
-#pragma endregion --------------------------------------------------------------
+#pragma endregion-- ------------------------------------------------------------
 
 #pragma region Game variables --------------------------------------------------
 
@@ -293,7 +296,7 @@ void gameStart()
 // Executed before each ball and before each game
 void ballStart(bool resetGame)
 {
-	feedBall();
+	motor.FeedBall();
 	startBall();
 	skillShotActive = false;
 	hold = false;
@@ -306,7 +309,7 @@ void ballStart(bool resetGame)
 	}
 	Serial.print("Ball #");
 	Serial.println(currentBall);
-	openDoor();
+	servo.OpenDoor();
 	if(resetGame) {
 		leds.allOff(false);
 	}
@@ -376,7 +379,7 @@ void launched()
 	if(launch) {
 		// Serial.print("Launched ball #");
 		// Serial.println(currentBall);
-		closeDoor();
+		servo.CloseDoor();
 		lastScore = playerScore;
 		ballMs = millis();
 		rolloverSkillMs = ballMs;
@@ -505,7 +508,7 @@ void preStartGame()
 {
 	startBall();
 	startAnimation();
-	closeDoor();
+	servo.CloseDoor();
 }
 
 void startBall()
@@ -874,32 +877,6 @@ void showMultiString(const char *msg[], uint nItems, uint *index)
 {
 	Display::Show((char *)msg[*index % nItems]);
 	(*index)++;
-}
-
-#pragma endregion --------------------------------------------------------------
-
-#pragma region Output and actuator functions -----------------------------------
-
-void feedBall()
-{
-	i2c.Cmd(CHILD_ADDRESS, (int)childCommands::MOTOR, HIGH);
-	delay(FEEDBALL_TIME);
-	while(digitalRead(feederHomeSensor)) {
-		delay(5);
-	}
-	i2c.Cmd(CHILD_ADDRESS, (int)childCommands::MOTOR, LOW);
-}
-
-void closeDoor()
-{
-	i2c.Cmd(CHILD_ADDRESS, (int)childCommands::SERVO, (int)servoCmd::CLOSE);
-	delay(SERVO_TIMER);
-}
-
-void openDoor()
-{
-	i2c.Cmd(CHILD_ADDRESS, (int)childCommands::SERVO, (int)servoCmd::OPEN);
-	delay(SERVO_TIMER);
 }
 
 #pragma endregion --------------------------------------------------------------
