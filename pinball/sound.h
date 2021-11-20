@@ -7,8 +7,9 @@
 
 #include <Arduino.h>
 #include <FtModules.h>
+#include "child.h"
 
-extern "C" FtModules::I2C i2c;
+// extern "C" FtModules::I2C i2c;
 
 class Sound
 {

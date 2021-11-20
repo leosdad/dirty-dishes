@@ -7,7 +7,11 @@
 
 #include "leds.h"
 
+#pragma region Hardware constants ----------------------------------------------
+
 #define ANIMATION_TIME		800
+
+#pragma endregion --------------------------------------------------------------
 
 #pragma region LED state functions ---------------------------------------------
 

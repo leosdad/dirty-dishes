@@ -720,13 +720,13 @@ bool checkOutlanes()
 		OUTLANE_POINTS, childLeds::LEFT_OUTLANE, outState::ONESHOT, NULL, 0)) {
 		hit = true;
 		// HACK: Não está claro se resolve o problema
-		delay(DEFAULT_DEBOUNCE);
+		// delay(DEFAULT_DEBOUNCE);
 	}
 	if(sensorScore(rightOutlaneSensor, &rightOutlaneMs, false,
 		OUTLANE_POINTS, childLeds::RIGHT_OUTLANE, outState::ONESHOT, NULL, 0)) {
 		hit = true;
 		// HACK: Não está claro se resolve o problema
-		delay(DEFAULT_DEBOUNCE);
+		// delay(DEFAULT_DEBOUNCE);
 	}
 
 	return hit;

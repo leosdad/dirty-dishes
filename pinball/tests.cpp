@@ -11,7 +11,7 @@
 #include "display.h"
 #include "sound.h"
 
-#pragma region Test functions --------------------------------------------------
+#pragma region Test methods --------------------------------------------------
 
 // Sensor state variables
 

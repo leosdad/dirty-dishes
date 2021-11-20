@@ -42,7 +42,7 @@ ulong rightPreviousMs;
 
 #pragma endregion --------------------------------------------------------------
 
-#pragma region Output and actuator functions -----------------------------------
+#pragma region Methods ---------------------------------------------------------
 
 void Flippers::Reset()
 {

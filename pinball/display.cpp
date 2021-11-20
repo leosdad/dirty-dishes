@@ -1,10 +1,13 @@
-/*
-	Display functions
-*/
+// -----------------------------------------------------------------------------
 
-#include <Arduino.h>
-#include <FtModules.h>
+// Dirty Dishes pinball: I²C display wrapper commands
+// Rubem Pechansky 2021
+
+// -----------------------------------------------------------------------------
+
 #include "display.h"
+
+#pragma region Methods ---------------------------------------------------------
 
 void Display::Clear()
 {
@@ -50,3 +53,5 @@ void Display::U2s(char *buffer, unsigned long value)
 		value /= 10;
 	}
 }
+
+#pragma endregion --------------------------------------------------------------
