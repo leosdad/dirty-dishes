@@ -1,6 +1,10 @@
-/*
-	Test functions
-*/
+// -----------------------------------------------------------------------------
+
+// Dirty Dishes pinball: Test functions
+// Rubem Pechansky 2021
+
+// -----------------------------------------------------------------------------
+
 
 #include <Arduino.h>
 #include <FtModules.h>

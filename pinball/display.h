@@ -1,6 +1,9 @@
-/*
-  display.h
-*/
+// -----------------------------------------------------------------------------
+
+// Dirty Dishes pinball: I²C display wrapper commands
+// Rubem Pechansky 2021
+
+// -----------------------------------------------------------------------------
 
 #ifndef display_h
 #define display_h

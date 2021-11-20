@@ -1,6 +1,9 @@
-/*
-  pinball.h
-*/
+// -----------------------------------------------------------------------------
+
+// Dirty Dishes pinball: Primary Arduino
+// Rubem Pechansky 2021
+
+// -----------------------------------------------------------------------------
 
 #ifndef pinball_h
 #define pinball_h
@@ -56,7 +59,6 @@ const byte launchSensor = A7;
 
 // ------------------------------------------------------------ Global variables
 
-extern "C" FtModules::I2C i2c;
 extern "C" Leds leds;
 extern "C" char displayBuffer[];
 extern "C" unsigned long currentMs;

@@ -14,6 +14,7 @@
 #include "sound.h"
 #include "servo.h"
 #include "motor.h"
+#include "general.h"
 
 #pragma region Hardware constants ----------------------------------------------
 
@@ -146,7 +147,6 @@ bool spinnerState = false;
 char displayBuffer[DISPLAYCHARS];
 
 Servo servo;
-FtModules::I2C i2c;
 Leds leds;
 Motor motor;
 
@@ -184,7 +184,7 @@ void setup()
 	Wire.begin();
 
 	setPinModes();
-	resetChild();
+	General::Reset();
 	Display::Init();
 
 	Serial.println("");
@@ -210,11 +210,6 @@ void setPinModes()
 		pinMode(outputs[i], OUTPUT);
 		digitalWrite(outputs[i], (int)outState::OFF);
 	}
-}
-
-void resetChild()
-{
-	i2c.Cmd(CHILD_ADDRESS, (int)childCommands::RESET);
 }
 
 #pragma endregion --------------------------------------------------------------

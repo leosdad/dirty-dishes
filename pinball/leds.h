@@ -1,6 +1,9 @@
-/*
-  leds.h
-*/
+// -----------------------------------------------------------------------------
+
+// Dirty Dishes pinball: LEDs
+// Rubem Pechansky 2021
+
+// -----------------------------------------------------------------------------
 
 #ifndef leds_h
 #define leds_h
@@ -22,9 +25,6 @@ class Leds
 	void Flash(childLeds led, uint time);
 	void OneShot(childLeds led, uint time);
 	void Off(childLeds led);
-
-  private:
-	static FtModules::I2C _i2c;
 };
 
 #endif // leds_h

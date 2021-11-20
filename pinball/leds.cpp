@@ -17,25 +17,25 @@
 
 void Leds::On(childLeds led)
 {
-	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led,
+	FtModules::I2C::Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led,
 		(byte)outState::ON, 0);
 }
 
 void Leds::Flash(childLeds led, uint time)
 {
-	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led,
+	FtModules::I2C::Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led,
 		(byte)outState::FLASH, time / 100);
 }
 
 void Leds::OneShot(childLeds led, uint time)
 {
-	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led,
+	FtModules::I2C::Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led,
 		(byte)outState::ONESHOT, time / 100);
 }
 
 void Leds::Off(childLeds led)
 {
-	_i2c.Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led,
+	FtModules::I2C::Cmd(CHILD_ADDRESS, (byte)childCommands::LED, (byte)led,
 		(byte)outState::OFF, 0);
 }
 

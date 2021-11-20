@@ -1,19 +1,19 @@
 // -----------------------------------------------------------------------------
 
-// Dirty Dishes pinball: I²C motor wrapper commands
+// Dirty Dishes pinball: I²C general wrapper commands
 // Rubem Pechansky 2021
 
 // -----------------------------------------------------------------------------
 
-#ifndef motor_h
-#define motor_h
+#ifndef general_h
+#define general_h
 
 #include "pinball.h"
 
-class Motor
+class General
 {
   public:
-	void FeedBall();
+	static void Reset();
 };
 
-#endif // motor_h
+#endif // general_h

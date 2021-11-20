@@ -1,6 +1,9 @@
-/*
-  flippers.h
-*/
+// -----------------------------------------------------------------------------
+
+// Dirty Dishes pinball: Flipper methods
+// Rubem Pechansky 2021
+
+// -----------------------------------------------------------------------------
 
 #ifndef flippers_h
 #define flippers_h
