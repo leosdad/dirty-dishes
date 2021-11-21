@@ -8,14 +8,15 @@
 #include <Wire.h>
 
 #include "pinball.h"
-#include "general.h"
-#include "tests.h"
-#include "flippers.h"
-#include "leds.h"
 #include "display.h"
-#include "sound.h"
-#include "servo.h"
+#include "flippers.h"
+#include "general.h"
+#include "leds.h"
+#include "messages.h"
 #include "motor.h"
+#include "servo.h"
+#include "sound.h"
+#include "tests.h"
 
 #pragma region Hardware constants ----------------------------------------------
 
@@ -65,21 +66,17 @@ const byte holdThreshold = 3; // Number of stop sensor hits to activate hold
 
 #define BALLSAVER_TIME			3000
 #define SKILL_SHOT_TIME			1000
-#define ENDGAME_TIME			1500
-#define ENDSCORE_TIME			1500
 #define BALL_NEAR_HOME_TIME		400
-#define DISPLAY_ROTATE_TIME		200
 #define HOLD_TIME				5000
 #define RELEASE_TIME			500		// Must be enough to let the ball go
 #define MULTIPLIER_RESET_TIME	1500
 #define MULTIPLIER_WAIT_TIME	300
 #define END_FLASH_TIME			250
-#define SLOW_FLASH_TIME			600
 #define BALL_LOST_TIMEOUT		1700
 #define DEFAULT_ONESHOT			800
 #define NORMAL_FLASH			200
 
-// Points
+// Points awarded
 
 #define LEFT_ORBIT_POINTS		50
 #define STOPMAG_POINTS			1000
@@ -90,12 +87,6 @@ const byte holdThreshold = 3; // Number of stop sensor hits to activate hold
 #define HIGH_SPINNER_POINTS		75
 #define ROLLOVER_POINTS			50
 #define SKILL_SHOT_POINTS		1500
-
-// Strings
-
-const char *ballLostMessages[] = {" OOPS", "UH-OH", " OUT"};
-const char *endGameMessages[] = {"  BYE", " CIAO", "Ended", "ADIOS", "  End", " LOST"};
-const char *replayMessages[] = {"REPLAY", "AGAIN", "LUCKY", "SAVED"};
 
 #pragma endregion --------------------------------------------------------------
 
@@ -129,6 +120,7 @@ enum class extraBallStates
 
 // Time variables
 
+ulong currentMs;
 ulong leftOrbitMs = 0;
 ulong stopMagMs = 0;
 ulong spinnerMs = 0;
@@ -142,13 +134,12 @@ ulong holdSensorMs = 0;
 ulong ballMs = 0;
 ulong multiplierMs = ULONG_MAX;
 
-unsigned long currentMs;
 bool spinnerState = false;
-char displayBuffer[DISPLAYCHARS];
 
-Servo servo;
 Leds leds;
+Messages Msg;
 Motor motor;
+Servo servo;
 
 #pragma endregion-- ------------------------------------------------------------
 
@@ -160,10 +151,6 @@ byte multiplier = 1;
 byte ballSaves = 0;
 byte stopSensorHits = 0;
 extraBallStates extraBallState = extraBallStates::NOEXTRABALL;
-
-uint numGames = 0;
-uint numBalls = 0;
-uint numSaves = 0;
 
 bool rollovers[3] = {false, false, false};
 bool skillShotActive = false;
@@ -190,14 +177,10 @@ void setup()
 	Serial.println("");
 	Serial.println("Started");
 	preStartGame();
-	Serial.println("----------------------------");
-	Serial.println("gameState: Ready");
 }
 
 void setPinModes()
 {
-	// Set up pin modes
-
 	for(int i = 0; i < sizeof pullUps; i++) {
 		pinMode(pullUps[i], INPUT_PULLUP);
 	}
@@ -307,7 +290,7 @@ void ballStart(bool resetGame)
 	leds.Off(childLeds::LEFT_OUTLANE);
 	leds.Off(childLeds::RIGHT_OUTLANE);
 	leds.Flash(childLeds::ROLLOVER_SKILL, NORMAL_FLASH);
-	displayBall();
+	Msg.ShowBall();
 	gameState = gameStates::LAUNCHED;
 	Serial.println("----------------------------");
 	Serial.println("gameState: Launched");
@@ -375,7 +358,7 @@ void launched()
 		ballMs = millis();
 		rolloverSkillMs = ballMs;
 		skillShotActive = true;
-		displayScore();
+		Msg.ShowScore();
 		Sound::Play(soundNames::CLANG);
 		gameState = gameStates::PLAYING;
 		Serial.println("----------------------------");
@@ -419,7 +402,7 @@ void ballLost()
 		Serial.println("gameState: Save ball");
 	} else {
 		playerScore += BALL_LOST_POINTS;
-		displayScore();
+		Msg.ShowScore();
 		if(currentBall < ballsPerGame) {
 			gameState = gameStates::NEXT_BALL;
 			Serial.println("----------------------------");
@@ -447,7 +430,7 @@ void saveBall()
 	ballSaves++;
 	playerScore = lastScore;
 	// Serial.println("Saved");
-	showMultiString(replayMessages, NUMITEMS(replayMessages), &numSaves);
+	Msg.ShowReplay();
 	Sound::Play(soundNames::BAMBOO);
 	gameState = gameStates::BALL_NEAR_HOME;
 	Serial.println("----------------------------");
@@ -456,7 +439,7 @@ void saveBall()
 
 void nextBall()
 {
-	showMultiString(ballLostMessages, NUMITEMS(ballLostMessages), &numBalls);
+	Msg.ShowBallLost();
 	Sound::Play(soundNames::BOING);
 	currentBall++;
 	ballSaves = 0;
@@ -472,7 +455,7 @@ void ballNearHome()
 	while((millis() < ms + BALL_LOST_TIMEOUT) && digitalRead(ballNearHomeSensor)) {
 		//
 	}
-	newBallAnimation();
+	Msg.ShowNewBallAnimation();
 	delay(BALL_NEAR_HOME_TIME);
 	ballStart(false);
 }
@@ -480,9 +463,9 @@ void ballNearHome()
 void gameOver()
 {
 	// Serial.println("Game over -----------------------------------");
-	showMultiString(endGameMessages, NUMITEMS(endGameMessages), &numGames);
+	Msg.ShowEndGame();
 	Sound::Play(soundNames::WHISTLE);
-	flashScore(END_FLASH_TIME);
+	Msg.ShowScore(END_FLASH_TIME);
 	preStartGame();
 	gameState = gameStates::GAME_START;
 	Serial.println("----------------------------");
@@ -496,7 +479,7 @@ void gameOver()
 void preStartGame()
 {
 	startBall();
-	startAnimation();
+	Msg.ShowStartAnimation();
 	servo.CloseDoor();
 }
 
@@ -547,7 +530,7 @@ bool sensorScore(uint port, ulong *msVar, bool positiveLogic,
 		if((positiveLogic && digitalRead(port)) || (!positiveLogic && !digitalRead(port))) {
 			*msVar = currentMs;
 			playerScore += points * multiplier;
-			displayScore();
+			Msg.ShowScore();
 			Sound::Play(soundNames::DING);
 			if(callback) {
 				callback(param);
@@ -603,7 +586,7 @@ bool checkSpinner()
 			spinnerState = false;
 			playerScore += SPINNER_POINTS;
 			rotateRollovers(false);
-			displayScore();
+			Msg.ShowScore();
 			hit = true;
 		}
 	} else {
@@ -660,12 +643,7 @@ void checkMultiplier(uint nRollover)
 		if(multiplier < maxMultiplier) {
 			multiplier++;
 		}
-		displayMultiplier();
-		// strcpy(displayBuffer, "MULT ");
-		// displayBuffer[5] = '0' + multiplier;
-		// display.Show(displayBuffer, 100);
-		// Serial.print("Multiplier: ");
-		// Serial.println(multiplier);
+		Msg.ShowMultiplier();
 		multiplierMs = currentMs;
 	}
 }
@@ -696,7 +674,7 @@ bool checkRollovers()
 				leds.Off((childLeds)i);
 			}
 			// Serial.println("Reset rollovers");
-			// displayScore();
+			// showScore();
 			multiplierMs = ULONG_MAX;
 		}
 	}
@@ -711,14 +689,10 @@ bool checkOutlanes()
 	if(sensorScore(leftOutlaneSensor, &leftOutlaneMs, false,
 		OUTLANE_POINTS, childLeds::LEFT_OUTLANE, outState::ONESHOT, NULL, 0)) {
 		hit = true;
-		// HACK: Não está claro se resolve o problema
-		// delay(DEFAULT_DEBOUNCE);
 	}
 	if(sensorScore(rightOutlaneSensor, &rightOutlaneMs, false,
 		OUTLANE_POINTS, childLeds::RIGHT_OUTLANE, outState::ONESHOT, NULL, 0)) {
 		hit = true;
-		// HACK: Não está claro se resolve o problema
-		// delay(DEFAULT_DEBOUNCE);
 	}
 
 	return hit;
@@ -733,7 +707,7 @@ bool checkHold()
 			HOLD_SENSOR_THRESHOLD, HOLD_POINTS)) {
 			leds.OneShot(childLeds::HOLD, DEFAULT_ONESHOT);
 			hit = true;
-			displayScore();
+			Msg.ShowScore();
 		}
 	} else {
 		if(analogScore(holdSensor, &holdSensorMs, MIN_ANALOG_THRESHOLD,
@@ -743,10 +717,7 @@ bool checkHold()
 			// Serial.print("------------ Score: ");
 			// Serial.println(playerScore);
 
-			displayHold();
-			// strcpy(displayBuffer, "HOLD  ");
-			// displayBuffer[5] = '1' + stopSensorHits;
-			// display.Show(displayBuffer);
+			Msg.ShowHoldState();
 
 			if(stopSensorHits + 1 == holdThreshold) {
 				holdActive = true;
@@ -776,77 +747,9 @@ bool checkHold()
 	return hit;
 }
 
-bool checkButtons()
+/*inline*/ bool checkButtons()
 {
 	return RIGHT_BUTTON_ON || LEFT_BUTTON_ON;
-}
-
-#pragma endregion --------------------------------------------------------------
-
-#pragma region Display functions -----------------------------------------------
-
-void startAnimation()
-{
-	Display::Rotate(DISPLAY_ROTATE_TIME);
-	Display::Show("oooooo*oooooo******o******");
-	//            1234567890123456789012345678901
-}
-
-void newBallAnimation()
-{
-	Display::Clear();
-	Display::Rotate(120);
-	Display::Show("_-@-_-@-");
-}
-
-void displayBall()
-{
-	Display::Stop();
-	strcpy(displayBuffer, "BALL  ");
-	displayBuffer[5] = '0' + currentBall;
-	Display::FlashMessage(displayBuffer, SLOW_FLASH_TIME);
-	Display::Hold(1000);
-}
-
-void displayMultiplier()
-{
-	strcpy(displayBuffer, "MULT ");
-	displayBuffer[5] = '0' + multiplier;
-	Display::Show(displayBuffer);
-	Display::Hold(1000);
-	Serial.print("*** Multiplier: ");
-	Serial.println(multiplier);
-}
-
-void displayHold()
-{
-	strcpy(displayBuffer, "HOLD  ");
-	displayBuffer[5] = '1' + stopSensorHits;
-	Display::Show(displayBuffer);
-	Display::Hold(700);
-	Serial.print("Hold: ");
-	Serial.println(stopSensorHits);
-}
-
-void displayScore()
-{
-	Display::Stop();
-	Display::U2s(displayBuffer, playerScore);
-	Display::Show(displayBuffer);
-}
-
-void flashScore(uint speed)
-{
-	delay(ENDGAME_TIME);
-	Display::U2s(displayBuffer, playerScore);
-	Display::FlashMessage(displayBuffer, speed);
-	delay(ENDSCORE_TIME);
-}
-
-void showMultiString(const char *msg[], uint nItems, uint *index)
-{
-	Display::Show((char *)msg[*index % nItems]);
-	(*index)++;
 }
 
 #pragma endregion --------------------------------------------------------------
