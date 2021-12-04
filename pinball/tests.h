@@ -8,6 +8,8 @@
 #ifndef tests_h
 #define tests_h
 
+#include "pinball.h"
+
 class Tests
 {
   public:
@@ -16,6 +18,7 @@ class Tests
 	static void Inputs();
 	static void AnalogSensors();
 	static void Servo();
+	static void GameState(gameStates state);
 
   private:
 	static void testDigitalSensor(byte sensor, bool *last, char *name);

@@ -108,6 +108,49 @@ void Tests::Servo()
 	delay(1000);
 }
 
+void Tests::GameState(gameStates state)
+{
+	Serial.println("----------------------------");
+	Serial.print("gameState: ");
+
+	switch(state) {
+		case gameStates::GAME_START:
+			Serial.println("Game start");
+			return;
+		case gameStates::BALL_START:
+			Serial.println("Ball start");
+			return;
+		case gameStates::LAUNCHING:
+			Serial.println("Launching");
+			return;
+		case gameStates::PLAYING:
+			Serial.println("Playing");
+			return;
+		case gameStates::NO_MORE_POINTS:
+			Serial.println("No more points");
+			return;
+		case gameStates::BALL_LOST:
+			Serial.println("Ball lost");
+			return;
+		case gameStates::SAVE_BALL:
+			Serial.println("Save ball");
+			return;
+		case gameStates::NEXT_BALL:
+			Serial.println("Next ball");
+			return;
+		case gameStates::BALL_NEAR_HOME:
+			Serial.println("Ball near home");
+			return;
+		case gameStates::GAME_OVER:
+			Serial.println("Game over");
+			return;
+		default:
+			Serial.print("Unknown: ");
+			Serial.println((int)state);
+			return;
+	}
+}
+
 #pragma endregion --------------------------------------------------------------
 
 #pragma region Private methods -------------------------------------------------

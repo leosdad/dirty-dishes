@@ -21,6 +21,22 @@
 #define SEVENSEGDISPLAY_ADR		0x09
 #define DISPLAYCHARS			6
 
+// Enums
+
+enum class gameStates
+{
+	GAME_START = 1,
+	BALL_START,
+	LAUNCHING,
+	PLAYING,
+	NO_MORE_POINTS,
+	BALL_LOST,
+	SAVE_BALL,
+	NEXT_BALL,
+	BALL_NEAR_HOME,
+	GAME_OVER,
+};
+
 // Arduino pin assignments
 
 const byte leftButton = 2;
@@ -45,21 +61,24 @@ const byte launchSensor = A7;
 
 // Analog sensor thresholds
 
-#define MIN_ANALOG_THRESHOLD	10		// Prevent false readings when 19 V off
+#define MIN_ANALOG_THRESHOLD	10		// Prevent false readings w/ 19 V off
 #define LAUNCH_SENSOR_THRESHOLD 600
 #define HOLD_SENSOR_THRESHOLD	600
 
 // Sensor macros
 
-#define LEFT_BUTTON_ON	 (!digitalRead(leftButton))
-#define LEFT_BUTTON_OFF	 (digitalRead(leftButton))
-#define RIGHT_BUTTON_ON	 (!digitalRead(rightButton))
-#define RIGHT_BUTTON_OFF (digitalRead(rightButton))
+#define LEFT_BUTTON_ON		(!digitalRead(leftButton))
+#define RIGHT_BUTTON_ON		(!digitalRead(rightButton))
+#define LEFT_BUTTON_OFF		(digitalRead(leftButton))
+#define RIGHT_BUTTON_OFF	(digitalRead(rightButton))
+#define IS_BALL_LOST		(digitalRead(ballLostSensor))
+
+#define ARDUINO_PINS		(A7 + 1)
 
 // Global variables
 
-extern "C" Leds leds;
-extern "C" char displayBuffer[];
-extern "C" unsigned long currentMs;
+extern Leds leds;
+extern char displayBuffer[];
+extern uint sensorState[ARDUINO_PINS];
 
 #endif // pinball_h

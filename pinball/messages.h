@@ -11,11 +11,17 @@
 #include "pinball.h"
 #include "display.h"
 
+#define DEFAULT_ROTATE_TIME			200
+#define SLOW_FLASH_TIME			600
+
 class Messages
 {
   public:
-	void ShowStartAnimation();
-	void ShowNewBallAnimation();
+	void Init();
+	void Show(char *str);
+	void Rotate(char *str, uint time = DEFAULT_ROTATE_TIME);
+	void Flash(char *str, uint time = SLOW_FLASH_TIME);
+	void ShowBonus();
 	void ShowBall();
 	void ShowMultiplier();
 	void ShowHoldState();
@@ -25,7 +31,7 @@ class Messages
 	void ShowEndGame();
 
   private:
-	void showMultiString(const char *msg[], uint nItems, uint *index);
+	void showMultiString(const char *str[], uint nItems, uint *index);
 };
 
 #endif // messages_h

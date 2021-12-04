@@ -6,14 +6,18 @@
 // -----------------------------------------------------------------------------
 
 #include <Wire.h>
+#include <AsyncDelay.h>
 
 #include "pinball.h"
-#include "display.h"
+
+#include "debounce.h"
 #include "flippers.h"
+#include "game.h"
 #include "general.h"
 #include "leds.h"
 #include "messages.h"
 #include "motor.h"
+#include "sensors.h"
 #include "servo.h"
 #include "sound.h"
 #include "tests.h"
@@ -23,11 +27,6 @@
 // Baud rate
 
 #define BAUDRATE				57600
-
-// Time constants
-
-#define DEFAULT_DEBOUNCE		200
-#define ANALOG_DEBOUNCE			400
 
 // Inputs and outputs
 
@@ -46,66 +45,7 @@ const byte outputs[] = {leftFlipper, rightFlipper, stopMagnet};
 
 #pragma endregion --------------------------------------------------------------
 
-#pragma region Macros ----------------------------------------------------------
-
-// Sensor macros
-
-#define IS_BALL_LOST	 (digitalRead(ballLostSensor))
-#define IS_SPINNER_UP	 (!digitalRead(spinnerSensor))
-
-#pragma endregion --------------------------------------------------------------
-
-#pragma region Game constants --------------------------------------------------
-
-const byte ballsPerGame = 3;
-const byte maxBallSaves = 2;
-const byte maxMultiplier = 8;
-const byte holdThreshold = 3; // Number of stop sensor hits to activate hold
-
-// Time constants
-
-#define BALLSAVER_TIME			3000
-#define SKILL_SHOT_TIME			1000
-#define BALL_NEAR_HOME_TIME		400
-#define HOLD_TIME				5000
-#define RELEASE_TIME			500		// Must be enough to let the ball go
-#define MULTIPLIER_RESET_TIME	1500
-#define MULTIPLIER_WAIT_TIME	300
-#define END_FLASH_TIME			250
-#define BALL_LOST_TIMEOUT		1700
-#define DEFAULT_ONESHOT			800
-#define NORMAL_FLASH			200
-
-// Points awarded
-
-#define LEFT_ORBIT_POINTS		50
-#define STOPMAG_POINTS			1000
-#define HOLD_POINTS				STOPMAG_POINTS
-#define BALL_LOST_POINTS		250
-#define OUTLANE_POINTS			800
-#define SPINNER_POINTS			25
-#define HIGH_SPINNER_POINTS		75
-#define ROLLOVER_POINTS			50
-#define SKILL_SHOT_POINTS		1500
-
-#pragma endregion --------------------------------------------------------------
-
 #pragma region Enums -----------------------------------------------------------
-
-// Game states
-
-enum class gameStates
-{
-	GAME_START = 1,
-	LAUNCHED,
-	PLAYING,
-	SAVE_BALL,
-	NEXT_BALL,
-	BALL_NEAR_HOME,
-	NO_MORE_POINTS,
-	BALL_LOST,
-	GAME_OVER,
-};
 
 enum class extraBallStates
 {
@@ -118,46 +58,38 @@ enum class extraBallStates
 
 #pragma region Hardware variables ----------------------------------------------
 
-// Time variables
-
-ulong currentMs;
-ulong leftOrbitMs = 0;
-ulong stopMagMs = 0;
-ulong spinnerMs = 0;
-ulong rollover1Ms = 0;
-ulong rollover2Ms = 0;
-ulong rollover3Ms = 0;
-ulong rolloverSkillMs = ULONG_MAX;
-ulong leftOutlaneMs = 0;
-ulong rightOutlaneMs = 0;
-ulong holdSensorMs = 0;
-ulong ballMs = 0;
-ulong multiplierMs = ULONG_MAX;
-
-bool spinnerState = false;
-
 Leds leds;
 Messages Msg;
 Motor motor;
 Servo servo;
 
-#pragma endregion-- ------------------------------------------------------------
+// Time variables
+
+AsyncDelay ballSaveTimer;
+AsyncDelay servoTimer;
+
+extern AsyncDelay skillShotTimer;
+
+#pragma endregion --------------------------------------------------------------
 
 #pragma region Game variables --------------------------------------------------
 
-gameStates gameState = gameStates::GAME_START;
+gameStates gameState = (gameStates)-1;
+gameStates lastGameState = (gameStates)-2;
 byte currentBall = 1;
 byte multiplier = 1;
 byte ballSaves = 0;
 byte stopSensorHits = 0;
 extraBallStates extraBallState = extraBallStates::NOEXTRABALL;
 
-bool rollovers[3] = {false, false, false};
 bool skillShotActive = false;
 bool holdActive = false;
+bool greasyActive = false;
 
 ulong playerScore = 0;
 ulong lastScore = 0;
+ulong greasyScore = 0;
+ulong eobBonus = 0;
 
 #pragma endregion --------------------------------------------------------------
 
@@ -172,11 +104,10 @@ void setup()
 
 	setPinModes();
 	General::Reset();
-	Display::Init();
+	Msg.Init();
 
-	Serial.println("");
-	Serial.println("Started");
 	preStartGame();
+	setGameState(gameStates::GAME_START);
 }
 
 void setPinModes()
@@ -218,20 +149,24 @@ void gameLoop()
 			gameStart();
 			break;
 
-		case gameStates::LAUNCHED:
-			launched();
+		case gameStates::BALL_START:
+			ballStart();
+			break;
+
+		case gameStates::LAUNCHING:
+			launching();
 			break;
 
 		case gameStates::PLAYING:
 			playing();
 			break;
 
-		case gameStates::BALL_LOST:
-			ballLost();
-			break;
-
 		case gameStates::NO_MORE_POINTS:
 			noMorePoints();
+			break;
+
+		case gameStates::BALL_LOST:
+			ballLost();
 			break;
 
 		case gameStates::SAVE_BALL:
@@ -256,172 +191,123 @@ void gameLoop()
 
 #pragma region State machine functions -----------------------------------------
 
+// void tableStart()
+// {
+// 	preStartGame();
+// 	setGameState(gameStates::GAME_START);
+// }
+
 void gameStart()
 {
 	if(checkButtons()) {
-		Display::Stop();
-		Display::Show("START");
-		ballStart(true);
+		Msg.Show("START");
+		currentBall = 1;
+		multiplier = 1;
+		playerScore = 0;
+		lastScore = 0;
+		leds.On(childLeds::LIGHTS);
+		leds.allOff(false);
+		setGameState(gameStates::BALL_START);
 	} else {
-		leds.waitAnimation(checkButtons);
+		leds.waitAnimation();
 	}
 }
 
-// Executed before each ball and before each game
-void ballStart(bool resetGame)
+void ballStart()
 {
 	motor.FeedBall();
-	startBall();
+	resetLeds();
 	skillShotActive = false;
 	holdActive = false;
-	// leds.Off(childLeds::HOLD);
 	stopSensorHits = 0;
-	if(resetGame) {
-		multiplier = 1;
-		currentBall = 1;
-		playerScore = 0;
-	}
-	Serial.print("Ball #");
-	Serial.println(currentBall);
+	greasyScore = 0;
+	eobBonus = 0;
+	greasyActive = false;
+	resetRollovers();
 	servo.OpenDoor();
-	if(resetGame) {
-		leds.allOff(false);
-	}
+	servoTimer.start(SERVO_TIMER, AsyncDelay::MILLIS);
 	leds.Off(childLeds::LEFT_OUTLANE);
 	leds.Off(childLeds::RIGHT_OUTLANE);
-	leds.Flash(childLeds::ROLLOVER_SKILL, NORMAL_FLASH);
+	leds.Flash(childLeds::ROLLOVER_SKILL, NORMAL_FLASH_LEDS);
+	// Serial.print("Ball #");
+	// Serial.println(currentBall);
 	Msg.ShowBall();
-	gameState = gameStates::LAUNCHED;
-	Serial.println("----------------------------");
-	Serial.println("gameState: Launched");
+
+	// Wait for servo door to open before changing state
+	while(!servoTimer.isExpired()) {
+		Flippers::Left();
+		Flippers::Right();
+	};
+	setGameState(gameStates::LAUNCHING);
 }
 
-void launched()
+void launching()
 {
-	currentMs = millis();
-	bool launch = false;
-
 	Flippers::Left();
 	Flippers::Right();
 
-	if(analogRead(launchSensor) < LAUNCH_SENSOR_THRESHOLD) {
-		Serial.println("Launched by launch sensor");
-		launch = true;
-	}
-
-	// The checks below are required because launchSensor is not 100% reliable
-
-	if(checkSpinner()) {
-		Serial.println("Launched by spinner");
-		launch = true;
-	}
-
-	if(checkSkillShot(true)) {
-		Serial.println("Launched by skill shot");
-		launch = true;
-	}
-
-	if(checkLeftOrbit()) {
-		Serial.println("Launched by left orbit");
-		launch = true;
-	}
-
-	if(checkRollovers()) {
-		Serial.println("Launched by rollover");
-		launch = true;
-	}
-
-	if(checkHold()) {
-		Serial.println("Launched by hold sensor");
-		launch = true;
-	}
-
-	// Check outlanes for ball out
-
-	if(checkOutlanes()) {
-		gameState = gameStates::NO_MORE_POINTS;
-		Serial.println("----------------------------");
-		Serial.println("gameState: No more points");
-	}
-
-	if(IS_BALL_LOST) {
-		gameState = gameStates::SAVE_BALL;
-		Serial.println("----------------------------");
-		Serial.println("gameState: Save ball");
-	}
-
-	if(launch) {
-		// Serial.print("Launched ball #");
-		// Serial.println(currentBall);
+	if(checkLaunch()) {
+		skillShotTimer.start(SKILL_SHOT_TIME, AsyncDelay::MILLIS);
+		ballSaveTimer.start(BALL_SAVER_TIME, AsyncDelay::MILLIS);
 		servo.CloseDoor();
+		servoTimer.start(SERVO_TIMER, AsyncDelay::MILLIS);
 		lastScore = playerScore;
-		ballMs = millis();
-		rolloverSkillMs = ballMs;
 		skillShotActive = true;
 		Msg.ShowScore();
 		Sound::Play(soundNames::CLANG);
-		gameState = gameStates::PLAYING;
-		Serial.println("----------------------------");
-		Serial.println("gameState: Playing");
+
+		// Wait for servo door to close before changing state
+		while(!servoTimer.isExpired()) {
+			Flippers::Left();
+			Flippers::Right();
+		};
+		setGameState(gameStates::PLAYING);
 	}
 }
 
 void playing()
 {
-	currentMs = millis();
-
 	Flippers::Left();
 	Flippers::Right();
 
-	checkSpinner();
-	checkSkillShot(false);
-	checkLeftOrbit();
+	checkOrbitSensor();
 	checkRollovers();
-	checkHold();
-
+	checkSkillShot();
+	checkStopMagnet();
+	checkSpinner();
 	if(checkOutlanes()) {
-		Flippers::Reset();
-		gameState = gameStates::NO_MORE_POINTS;
-		Serial.println("----------------------------");
-		Serial.println("gameState: No more points");
+		setGameState(gameStates::NO_MORE_POINTS);
 	}
-
-	if(IS_BALL_LOST) {
-		Flippers::Reset();
-		gameState = gameStates::BALL_LOST;
-		Serial.println("----------------------------");
-		Serial.println("gameState: Ball lost");
-	}
-}
-
-void ballLost()
-{
-	if(millis() - ballMs <= BALLSAVER_TIME && ballSaves < maxBallSaves) {
-		gameState = gameStates::SAVE_BALL;
-		Serial.println("----------------------------");
-		Serial.println("gameState: Save ball");
-	} else {
-		playerScore += BALL_LOST_POINTS;
-		Msg.ShowScore();
-		if(currentBall < ballsPerGame) {
-			gameState = gameStates::NEXT_BALL;
-			Serial.println("----------------------------");
-			Serial.println("gameState: Next ball");
-		} else {
-			gameState = gameStates::GAME_OVER;
-			Serial.println("-----*****-----*****-----*****-----");
-			Serial.println("gameState: Game over");
-			Serial.println("");
-		}
+	if(checkBallLost()) {
+		setGameState(gameStates::BALL_LOST);
 	}
 }
 
 void noMorePoints()
 {
+	resetLeds();
 	if(IS_BALL_LOST) {
-		gameState = gameStates::BALL_LOST;
-		Serial.println("----------------------------");
-		Serial.println("gameState: Ball lost");
+		setGameState(gameStates::BALL_LOST);
+	}
+}
+
+void ballLost()
+{
+	resetLeds();
+
+	if(!ballSaveTimer.isExpired() && ballSaves < MAX_BALL_SAVES) {
+		setGameState(gameStates::SAVE_BALL);
+	} else {
+		incrementScore(BALL_LOST_POINTS);
+		Msg.ShowScore();
+
+		if(currentBall < BALLS_PER_GAME) {
+			setGameState(gameStates::NEXT_BALL);
+		} else {
+			setGameState(gameStates::GAME_OVER);
+			Serial.println("-----*****-----*****-----*****-----");
+			Serial.println();
+		}
 	}
 }
 
@@ -429,327 +315,103 @@ void saveBall()
 {
 	ballSaves++;
 	playerScore = lastScore;
-	// Serial.println("Saved");
 	Msg.ShowReplay();
 	Sound::Play(soundNames::BAMBOO);
-	gameState = gameStates::BALL_NEAR_HOME;
-	Serial.println("----------------------------");
-	Serial.println("gameState: Ball near home");
+	setGameState(gameStates::BALL_NEAR_HOME);
 }
 
 void nextBall()
 {
 	Msg.ShowBallLost();
 	Sound::Play(soundNames::BOING);
+	delay(DEFAULT_DISPLAY_TIME);
+	showBallScore(false);
 	currentBall++;
 	ballSaves = 0;
 	extraBallState = extraBallStates::NOEXTRABALL;
-	gameState = gameStates::BALL_NEAR_HOME;
-	Serial.println("----------------------------");
-	Serial.println("gameState: Ball near home");
+	setGameState(gameStates::BALL_NEAR_HOME);
 }
 
 void ballNearHome()
 {
-	ulong ms = millis();
-	while((millis() < ms + BALL_LOST_TIMEOUT) && digitalRead(ballNearHomeSensor)) {
-		//
-	}
-	Msg.ShowNewBallAnimation();
+	delay(BALL_LOST_TIMEOUT);
+	Msg.Rotate("_-@-_-@-");
 	delay(BALL_NEAR_HOME_TIME);
-	ballStart(false);
+	setGameState(gameStates::BALL_START);
 }
 
 void gameOver()
 {
-	// Serial.println("Game over -----------------------------------");
 	Msg.ShowEndGame();
 	Sound::Play(soundNames::WHISTLE);
-	Msg.ShowScore(END_FLASH_TIME);
+	delay(DEFAULT_DISPLAY_TIME);
+	showBallScore(true);
 	preStartGame();
-	gameState = gameStates::GAME_START;
-	Serial.println("----------------------------");
-	Serial.println("gameState: Game start");
+	setGameState(gameStates::GAME_START);
 }
 
 #pragma endregion --------------------------------------------------------------
 
-#pragma region Game functions --------------------------------------------------
+#pragma region Auxiliary functions ---------------------------------------------
 
-void preStartGame()
+void incrementScore(ulong points)
 {
-	startBall();
-	Msg.ShowStartAnimation();
-	servo.CloseDoor();
+	playerScore += points * multiplier;
+	greasyScore += points * multiplier;
+
+	if(!greasyActive && greasyScore >= GREASY_SCORE) {
+		greasyActive = true;
+		leds.Flash(childLeds::LEFT_ORBIT, NORMAL_FLASH_LEDS);
+	}
 }
 
-void startBall()
+void resetLeds()
 {
 	leds.On(childLeds::LIGHTS);
-
-	for(int i = 0; i <= 2; i++) {
-		rollovers[i] = false;
-	}
 
 	for(int i = 0; i <= 7; i++) {
 		leds.Off((childLeds)i);
 	}
 }
 
-void rotateRollovers(bool right)
+void setGameState(gameStates state)
 {
-	if(right) {
-		bool s = rollovers[2];
-		rollovers[2] = rollovers[1];
-		rollovers[1] = rollovers[0];
-		rollovers[0] = s;
-	} else {
-		bool s = rollovers[0];
-		rollovers[0] = rollovers[1];
-		rollovers[1] = rollovers[2];
-		rollovers[2] = s;
-	}
-
-	for(int i = 0; i <= 2; i++) {
-		if(rollovers[i]) {
-			leds.On((childLeds)i);
-		} else {
-			leds.Off((childLeds)i);
-		}
+	gameState = state;
+	if(lastGameState != state) {
+		Tests::GameState(state);			// Uncomment this line for debug
+		lastGameState = state;
 	}
 }
 
-#pragma endregion --------------------------------------------------------------
-
-#pragma region Sensor functions ------------------------------------------------
-
-bool sensorScore(uint port, ulong *msVar, bool positiveLogic,
-	ulong points, childLeds led, outState ledOp, void (*callback)(uint), uint param)
+void preStartGame()
 {
-	if(currentMs > *msVar + DEFAULT_DEBOUNCE) {
-		if((positiveLogic && digitalRead(port)) || (!positiveLogic && !digitalRead(port))) {
-			*msVar = currentMs;
-			playerScore += points * multiplier;
-			Msg.ShowScore();
-			Sound::Play(soundNames::DING);
-			if(callback) {
-				callback(param);
-			}
-			if(led != childLeds::LIGHTS) {
-				if(ledOp == outState::ONESHOT) {
-					leds.OneShot(led, DEFAULT_ONESHOT);
-				} else {
-					leds.On(led);
-				}
-			}
-			if(positiveLogic) {
-				while(digitalRead(port)) {
-					// Serial.print("+ port "); Serial.println(port);
-				};
-			} else {
-				while(!digitalRead(port)) {
-					// Serial.print("- port "); Serial.println(port);
-				};
-			}
-			return true;
-		}
-	}
-	return false;
+	resetLeds();
+	Msg.Rotate("oooooo*oooooo******o******");
+	//          1234567890123456789012345678901
+	servo.CloseDoor();
+	// servoTimer.start(SERVO_TIMER, AsyncDelay::MILLIS);
+	// while(!servoTimer.isExpired()) {
+	// 	// Wait for servo door to close before exiting
+	// };
+	delay(TABLE_START_DELAY);
 }
 
-bool analogScore(uint port, ulong *msVar, uint min, uint max, ulong points)
+void showBallScore(bool gameOver)
 {
-	if(currentMs > *msVar + ANALOG_DEBOUNCE) {
-		int value = analogRead(port);
-
-		if(value >= min && value < max) {
-			*msVar = millis();
-			playerScore += points * multiplier;
-			Sound::Play(soundNames::DING);
-			do {
-				Flippers::Left();
-				Flippers::Right();
-				value = analogRead(port);
-			} while ((value >= min && value < max) && (millis() < *msVar + 2 * ANALOG_DEBOUNCE));
-			return true;
-		}
+	if(eobBonus) {
+		Msg.ShowBonus();
+		delay(DEFAULT_DISPLAY_TIME);
+		ulong score = playerScore;
+		playerScore = eobBonus;
+		Msg.ShowScore();
+		playerScore = score;
+		delay(DEFAULT_DISPLAY_TIME);
+		incrementScore(eobBonus);
 	}
-	return false;
-}
-
-bool checkSpinner()
-{
-	bool hit = false;
-
-	if(spinnerState) {
-		if(!IS_SPINNER_UP) {
-			spinnerState = false;
-			playerScore += SPINNER_POINTS;
-			rotateRollovers(false);
-			Msg.ShowScore();
-			hit = true;
-		}
-	} else {
-		if(IS_SPINNER_UP) {
-			spinnerState = true;
-		}
-	}
-	return hit;
-}
-
-bool checkLeftOrbit()
-{
-	return sensorScore(leftOrbitSensor, &leftOrbitMs, true,
-		LEFT_ORBIT_POINTS, childLeds::LEFT_ORBIT, outState::ONESHOT, NULL, 0);
-}
-
-bool checkSkillShot(bool override)
-{
-	if(skillShotActive) {
-		if(currentMs > rolloverSkillMs + SKILL_SHOT_TIME) {
-			skillShotActive = false;
-			leds.Off(childLeds::ROLLOVER_SKILL);
-			rolloverSkillMs = ULONG_MAX;
-		}
-	}
-
-	bool result = sensorScore(rolloverSkillSensor, &rolloverSkillMs, false,
-		override || skillShotActive ? SKILL_SHOT_POINTS : ROLLOVER_POINTS,
-		childLeds::ROLLOVER_SKILL, outState::ONESHOT, NULL, 0);
-
-	if(result && !skillShotActive) {
-		if(extraBallState == extraBallStates::NOEXTRABALL) {
-			extraBallState = extraBallStates::READY;
-			leds.On(childLeds::ROLLOVER_SKILL);
-		} else if(extraBallState == extraBallStates::READY) {
-			Display::Rotate(200);
-			Display::Show("EXTRA BALL ");
-			Serial.println("Extra ball");
-			leds.Flash(childLeds::LEFT_OUTLANE, NORMAL_FLASH);
-			leds.Flash(childLeds::RIGHT_OUTLANE, NORMAL_FLASH);
-			extraBallState = extraBallStates::ACTIVE;
-		}
-	}
-
-	return result;
-}
-
-void checkMultiplier(uint nRollover)
-{
-	rollovers[nRollover] = true;
-
-	if(rollovers[0] && rollovers[1] && rollovers[2] &&
-		(multiplierMs == ULONG_MAX || currentMs > multiplierMs + MULTIPLIER_RESET_TIME)) {
-		if(multiplier < maxMultiplier) {
-			multiplier++;
-		}
-		Msg.ShowMultiplier();
-		multiplierMs = currentMs;
-	}
-}
-
-bool checkRollovers()
-{
-	bool hit = false;
-
-	if(sensorScore(rollover1Sensor, &rollover1Ms, false,
-		ROLLOVER_POINTS, childLeds::ROLLOVER1, outState::ON, &checkMultiplier, 0)) {
-		hit = true;
-	}
-	if(sensorScore(rollover2Sensor, &rollover2Ms, false,
-		ROLLOVER_POINTS, childLeds::ROLLOVER2, outState::ON, &checkMultiplier, 1)) {
-		hit = true;
-	}
-	if(sensorScore(rollover3Sensor, &rollover3Ms, false,
-		ROLLOVER_POINTS, childLeds::ROLLOVER3, outState::ON, &checkMultiplier, 2)) {
-		hit = true;
-	}
-
-	// Resets rollover LEDs
-
-	if(rollovers[0] && rollovers[1] && rollovers[2]) {
-		if(currentMs > multiplierMs + MULTIPLIER_RESET_TIME) {
-			for(int i = 0; i <= 2; i++) {
-				rollovers[i] = false;
-				leds.Off((childLeds)i);
-			}
-			// Serial.println("Reset rollovers");
-			// showScore();
-			multiplierMs = ULONG_MAX;
-		}
-	}
-
-	return hit;
-}
-
-bool checkOutlanes()
-{
-	bool hit = false;
-
-	if(sensorScore(leftOutlaneSensor, &leftOutlaneMs, false,
-		OUTLANE_POINTS, childLeds::LEFT_OUTLANE, outState::ONESHOT, NULL, 0)) {
-		hit = true;
-	}
-	if(sensorScore(rightOutlaneSensor, &rightOutlaneMs, false,
-		OUTLANE_POINTS, childLeds::RIGHT_OUTLANE, outState::ONESHOT, NULL, 0)) {
-		hit = true;
-	}
-
-	return hit;
-}
-
-bool checkHold()
-{
-	bool hit = false;
-
-	if(holdActive && currentMs > stopMagMs + RELEASE_TIME) {
-		if(analogScore(holdSensor, &holdSensorMs, MIN_ANALOG_THRESHOLD,
-			HOLD_SENSOR_THRESHOLD, HOLD_POINTS)) {
-			leds.OneShot(childLeds::HOLD, DEFAULT_ONESHOT);
-			hit = true;
-			Msg.ShowScore();
-		}
-	} else {
-		if(analogScore(holdSensor, &holdSensorMs, MIN_ANALOG_THRESHOLD,
-			HOLD_SENSOR_THRESHOLD, STOPMAG_POINTS)) {
-
-			hit = true;
-			// Serial.print("------------ Score: ");
-			// Serial.println(playerScore);
-
-			Msg.ShowHoldState();
-
-			if(stopSensorHits + 1 == holdThreshold) {
-				holdActive = true;
-				leds.On(childLeds::HOLD);
-				digitalWrite(stopMagnet, HIGH);
-				stopMagMs = currentMs;
-			} else {
-				if(!holdActive) {
-					stopSensorHits++;
-				}
-			}
-		}
-	}
-	// if(holdActive && (currentMs > stopMagMs + RELEASE_TIME)) {
-	// 	digitalWrite(stopMagnet, HIGH);
-	// }
-
-	if(holdActive && (currentMs > stopMagMs + RELEASE_TIME + HOLD_TIME)) {
-		holdActive = false;
-		stopSensorHits = 0;
-		stopMagMs = ULONG_MAX;
-		digitalWrite(stopMagnet, LOW);
-		delay(RELEASE_TIME);
-		leds.Off(childLeds::HOLD);
-	}
-
-	return hit;
-}
-
-/*inline*/ bool checkButtons()
-{
-	return RIGHT_BUTTON_ON || LEFT_BUTTON_ON;
+	Msg.Show("SCORE");
+	delay(DEFAULT_DISPLAY_TIME);
+	Msg.ShowScore(gameOver);
+	delay(gameOver ? LONG_DISPLAY_TIME : 0);
 }
 
 #pragma endregion --------------------------------------------------------------

@@ -22,13 +22,6 @@ void Display::Init()
 	delay(DISPLAY_INIT_TIME);
 }
 
-void Display::FlashMessage(char *str, uint speed)
-{
-	Display::Stop();
-	Display::Flash(speed);
-	Display::Show(str);
-}
-
 void Display::Clear()
 {
 	FtModules::I2C::Cmd(SEVENSEGDISPLAY_ADR, FtModules::SevenSegDisplay::cmdBlank);
@@ -44,10 +37,10 @@ void Display::Show(char *str)
 	FtModules::I2C::Cmd(SEVENSEGDISPLAY_ADR, FtModules::SevenSegDisplay::cmdDisplay, str);
 }
 
-void Display::Hold(uint ms)
-{
-	FtModules::I2C::Cmd(SEVENSEGDISPLAY_ADR, FtModules::SevenSegDisplay::cmdHold, lowByte(ms), highByte(ms));
-}
+// void Display::Hold(uint ms)
+// {
+// 	FtModules::I2C::Cmd(SEVENSEGDISPLAY_ADR, FtModules::SevenSegDisplay::cmdHold, lowByte(ms), highByte(ms));
+// }
 
 void Display::Flash(uint ms)
 {

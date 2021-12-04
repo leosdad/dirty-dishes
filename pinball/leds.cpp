@@ -6,12 +6,7 @@
 // -----------------------------------------------------------------------------
 
 #include "leds.h"
-
-#pragma region Hardware constants ----------------------------------------------
-
-#define ANIMATION_TIME		800
-
-#pragma endregion --------------------------------------------------------------
+#include "game.h"
 
 #pragma region LED state functions ---------------------------------------------
 
@@ -43,29 +38,28 @@ void Leds::Off(childLeds led)
 
 #pragma region Public methods --------------------------------------------------
 
-void Leds::waitAnimation(bool (*callback)())
+int lLed = -1;
+int cLed = 0;
+ulong lastAnimMs = 0;
+
+void Leds::waitAnimation()
 {
-	for(int i = 0; i < 4; i++) {
+	if(millis() > lastAnimMs + LEDS_ANIMATION_TIME) {
 
-		childLeds led = (childLeds)(i % 4);
+		Off((childLeds)lLed);
+		On((childLeds)cLed);
+		Off((childLeds)(lLed + 4));
+		On((childLeds)(cLed + 4));
 
-		if(i % 2) {
+		if(cLed % 2) {
 			On((childLeds)8);
 		} else {
 			Off((childLeds)8);
 		}
 
-		On(led);
-		On((childLeds)((int)led + 4));
-		ulong msStart = millis();
-		while(millis() < msStart + ANIMATION_TIME) {
-			if(callback()) {
-				allOff(true);
-				return;
-			}
-		}
-		Off(led);
-		Off((childLeds)((int)led + 4));
+		lastAnimMs = millis();
+		lLed = cLed;
+		cLed = cLed == 3 ? 0 : cLed + 1;
 	}
 }
 

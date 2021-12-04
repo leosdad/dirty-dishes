@@ -6,16 +6,9 @@
 // -----------------------------------------------------------------------------
 
 #include "messages.h"
+#include "game.h"
 
 #pragma region Game constants ----------------------------------------------
-
-// Time constants
-
-#define ENDGAME_TIME			1500
-#define ENDSCORE_TIME			1500
-#define DISPLAY_ROTATE_TIME		200
-#define SLOW_FLASH_TIME			600
-#define END_FLASH_TIME			250
 
 // Multi-messages
 
@@ -37,27 +30,47 @@ char displayBuffer[DISPLAYCHARS];
 
 #pragma region Game variables --------------------------------------------------
 
-extern "C" byte currentBall;
-extern "C" byte multiplier;
-extern "C" byte stopSensorHits;
-extern "C" ulong playerScore;
+extern byte currentBall;
+extern byte multiplier;
+extern byte stopSensorHits;
+extern ulong playerScore;
 
 #pragma endregion --------------------------------------------------------------
 
 #pragma region Public methods --------------------------------------------------
 
-void Messages::ShowStartAnimation()
+void Messages::Init()
 {
-	Display::Rotate(DISPLAY_ROTATE_TIME);
-	Display::Show("oooooo*oooooo******o******");
-	//            1234567890123456789012345678901
+	Display::Init();
 }
 
-void Messages::ShowNewBallAnimation()
+void Messages::Show(char *str)
 {
 	Display::Clear();
-	Display::Rotate(120);
-	Display::Show("_-@-_-@-");
+	Display::Stop();
+	Display::Show(str);
+}
+
+void Messages::Rotate(char *str, uint time = DEFAULT_ROTATE_TIME)
+{
+	Display::Clear();
+	Display::Show(str);
+	Display::Rotate(time);
+}
+
+void Messages::Flash(char *str, uint time = SLOW_FLASH_TIME)
+{
+	Display::Stop();
+	Display::Show(str);
+	Display::Flash(time);
+}
+
+void Messages::ShowBonus()
+{
+	Display::Stop();
+	strcpy(displayBuffer, "BONUS");
+	Display::Show(displayBuffer);
+	Display::Flash(SLOW_FLASH_TIME);
 }
 
 void Messages::ShowBall()
@@ -65,8 +78,8 @@ void Messages::ShowBall()
 	Display::Stop();
 	strcpy(displayBuffer, "BALL  ");
 	displayBuffer[5] = '0' + currentBall;
-	Display::FlashMessage(displayBuffer, SLOW_FLASH_TIME);
-	Display::Hold(1000);
+	Flash(displayBuffer, SLOW_FLASH_TIME);
+	// Display::Hold(1000);
 }
 
 void Messages::ShowMultiplier()
@@ -74,9 +87,9 @@ void Messages::ShowMultiplier()
 	strcpy(displayBuffer, "MULT  ");
 	displayBuffer[5] = '0' + multiplier;
 	Display::Show(displayBuffer);
-	Display::Hold(1000);
-	Serial.print("*** Multiplier: ");
-	Serial.println(multiplier);
+	// Display::Hold(1000);
+	// Serial.print("*** Multiplier: ");
+	// Serial.println(multiplier);
 }
 
 void Messages::ShowHoldState()
@@ -84,18 +97,18 @@ void Messages::ShowHoldState()
 	strcpy(displayBuffer, "HOLD  ");
 	displayBuffer[5] = '1' + stopSensorHits;
 	Display::Show(displayBuffer);
-	Display::Hold(700);
-	Serial.print("Hold: ");
-	Serial.println(stopSensorHits);
+	// Display::Hold(700);
+	// Serial.print("Hold: ");
+	// Serial.println(stopSensorHits);
 }
 
 void Messages::ShowScore(bool flash = false)
 {
 	if(flash) {
-		delay(ENDGAME_TIME);
+		delay(MSG_END_GAME_TIME);
 		Display::U2s(displayBuffer, playerScore);
-		Display::FlashMessage(displayBuffer, END_FLASH_TIME);
-		delay(ENDSCORE_TIME);
+		Flash(displayBuffer, MSG_END_FLASH_TIME);
+		delay(MSG_END_SCORE_TIME);
 	} else {
 		Display::Stop();
 		Display::U2s(displayBuffer, playerScore);
@@ -122,9 +135,9 @@ void Messages::ShowEndGame()
 
 #pragma region Private methods --------------------------------------------------
 
-void Messages::showMultiString(const char *msg[], uint nItems, uint *index)
+void Messages::showMultiString(const char *str[], uint nItems, uint *index)
 {
-	Display::Show((char *)msg[*index % nItems]);
+	Display::Show((char *)str[*index % nItems]);
 	(*index)++;
 }
 

@@ -17,7 +17,7 @@
 class Leds
 {
   public:
-	void waitAnimation(bool (*callback)());
+	void waitAnimation();
 	void flashes(int time);
 	void allOff(bool lightsOff);
 

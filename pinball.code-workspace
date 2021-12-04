@@ -11,9 +11,6 @@
 		},
 		{
 			"path": "..\\..\\Software\\fischertechnik-modules\\arduino\\seven-seg-display"
-		},
-		{
-			"path": "..\\..\\..\\Documentos\\Arduino\\libraries\\PinballLib"
 		}
 	],
 	"settings": {

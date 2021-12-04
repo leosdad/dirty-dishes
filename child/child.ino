@@ -9,7 +9,7 @@
 #include <Wire.h>
 #include <AsyncDelay.h>
 #include <FtModules.h>
-#include <Servo.h>
+#include <RBD_Servo.h>
 #include <SoftwareSerial.h>
 #include <DFRobotDFPlayerMini.h>
 
@@ -29,8 +29,6 @@
 #define DEFAULT_VOLUME		12			// 0-30
 #define FX_TIMEOUT			10
 #define NUMPIXELS1			4
-
-// const byte MAXCMD = BUFFER_LENGTH;
 
 // Arduino pins
 
@@ -57,15 +55,21 @@ const byte outputs[] = {
 	lights
 };
 
-Servo servo;
+// Default servo values
+RBD::Servo rbdServo(servoDoor, 544, 2400);
 
 #pragma endregion --------------------------------------------------------------
 
 #pragma region Variables -------------------------------------------------------
 
 uint servoPos = 0;
+bool updateServo = true;
 byte pixBits = 0;
 byte lastPixBits = 0;
+
+// Servo
+
+AsyncDelay servoTimer;
 
 // Sound
 
@@ -111,7 +115,6 @@ void setup()
 		pinMode(outputs[i], OUTPUT);
 	}
 
-	servo.attach(servoDoor);
 	closeDoor();
 
 	Wire.begin(CHILD_ADDRESS);
@@ -126,12 +129,25 @@ void setup()
 
 void loop()
 {
-	checkTimers();
+	gameLoop();
 
 	// testServo();
 	// testAllLeds();
 	// testSound();
 	// testOutputs();
+}
+
+void gameLoop()
+{
+	checkTimers();
+
+	if(servoTimer.isExpired()) {
+		updateServo = false;
+	}
+
+	if(updateServo) {
+		rbdServo.update();
+	}
 }
 
 #pragma endregion --------------------------------------------------------------
@@ -292,12 +308,16 @@ void soundInit()
 
 void openDoor()
 {
-	servo.write(OPEN_DOOR);
+	updateServo = true;
+	rbdServo.moveToDegrees(OPEN_DOOR);
+	servoTimer.start(SERVO_TIMER, AsyncDelay::MILLIS);
 }
 
 void closeDoor()
 {
-	servo.write(CLOSED_DOOR);
+	updateServo = true;
+	rbdServo.moveToDegrees(CLOSED_DOOR);
+	servoTimer.start(SERVO_TIMER, AsyncDelay::MILLIS);
 }
 
 #pragma endregion --------------------------------------------------------------
@@ -331,11 +351,13 @@ void testServo()
 	ulong ms = millis();
 
 	if(ms > tsLast + 2000) {
-		servo.write(tsOpen ? OPEN_DOOR : CLOSED_DOOR);
+		rbdServo.moveToDegrees(tsOpen ? OPEN_DOOR : CLOSED_DOOR);
 		Serial.println(tsOpen ? "open" : "closed");
 		tsOpen = !tsOpen;
 		tsLast = ms;
 	}
+
+	rbdServo.update();
 }
 
 uint cLed = 0;

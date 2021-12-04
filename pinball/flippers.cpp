@@ -55,14 +55,14 @@ void Flippers::Left()
 	if(leftFlipperState == flipperStates::IDLE) {
 		if(LEFT_BUTTON_ON) {
 			digitalWrite(leftFlipper, HIGH);
-			leftButtonPreviousMs = currentMs;
+			leftButtonPreviousMs = millis();
 			leftFlipperState = flipperStates::STROKE;
 		}
 	} else if(leftFlipperState == flipperStates::STROKE) {
 		if(LEFT_BUTTON_OFF) {
 			digitalWrite(leftFlipper, LOW);
 			leftFlipperState = flipperStates::IDLE;
-		} else if(currentMs - leftButtonPreviousMs >= MAX_POWER_MS) {
+		} else if(millis() - leftButtonPreviousMs >= MAX_POWER_MS) {
 			leftFlipperState = flipperStates::HOLD;
 		}
 	} else if(leftFlipperState == flipperStates::HOLD) {
@@ -83,14 +83,14 @@ void Flippers::Right()
 	if(rightFlipperState == flipperStates::IDLE) {
 		if(RIGHT_BUTTON_ON) {
 			digitalWrite(rightFlipper, HIGH);
-			rightPreviousMs = currentMs;
+			rightPreviousMs = millis();
 			rightFlipperState = flipperStates::STROKE;
 		}
 	} else if(rightFlipperState == flipperStates::STROKE) {
 		if(RIGHT_BUTTON_OFF) {
 			digitalWrite(rightFlipper, LOW);
 			rightFlipperState = flipperStates::IDLE;
-		} else if(currentMs - rightPreviousMs >= MAX_POWER_MS) {
+		} else if(millis() - rightPreviousMs >= MAX_POWER_MS) {
 			rightFlipperState = flipperStates::HOLD;
 		}
 	} else if(rightFlipperState == flipperStates::HOLD) {
