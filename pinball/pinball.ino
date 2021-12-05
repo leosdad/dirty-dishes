@@ -191,12 +191,6 @@ void gameLoop()
 
 #pragma region State machine functions -----------------------------------------
 
-// void tableStart()
-// {
-// 	preStartGame();
-// 	setGameState(gameStates::GAME_START);
-// }
-
 void gameStart()
 {
 	if(checkButtons()) {
@@ -389,10 +383,6 @@ void preStartGame()
 	Msg.Rotate("oooooo*oooooo******o******");
 	//          1234567890123456789012345678901
 	servo.CloseDoor();
-	// servoTimer.start(SERVO_TIMER, AsyncDelay::MILLIS);
-	// while(!servoTimer.isExpired()) {
-	// 	// Wait for servo door to close before exiting
-	// };
 	delay(TABLE_START_DELAY);
 }
 

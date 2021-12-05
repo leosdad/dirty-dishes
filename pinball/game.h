@@ -11,6 +11,7 @@
 #define MAX_BALL_SAVES			2
 #define MAX_MULTIPLIER			8
 #define HOLD_THRESHOLD			3		// No. of stop sensor hits to activate hold
+#define BREAK_STREAK			13		// Spinner streak for higher scores
 
 // Points awarded
 
@@ -20,11 +21,11 @@
 #define BALL_LOST_POINTS		250
 #define OUTLANE_POINTS			800
 #define SPINNER_POINTS			25
-#define HIGH_SPINNER_POINTS		75
+#define SPINNER_BREAK_POINTS	75
 #define ROLLOVER_POINTS			50
 #define SKILL_SHOT_POINTS		1500
 
-#define GREASY_SCORE			3000
+#define GREASY_SCORE			5000
 #define GREASY_BONUS			800
 
 // Time constants
@@ -47,3 +48,4 @@
 #define MSG_END_FLASH_TIME		250
 #define DEFAULT_DISPLAY_TIME	500
 #define LONG_DISPLAY_TIME		2000
+#define SPINNER_STREAK_TIMER	200

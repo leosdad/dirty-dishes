@@ -32,6 +32,7 @@ AsyncDelay multipliersTimer;
 AsyncDelay skillShotTimer;
 AsyncDelay holdTimer;
 AsyncDelay holdScoreTimer;
+AsyncDelay spinnerCountTimer;
 
 #pragma endregion --------------------------------------------------------------
 
@@ -255,6 +256,22 @@ bool checkStopMagnet()
 	return result;
 }
 
+#pragma region Enums -----------------------------------------------------------
+
+enum class spinnerStates
+{
+	IDLE = 0,
+	STREAK,
+};
+
+#pragma endregion --------------------------------------------------------------
+
+// MAX 36
+
+bool spinnerStreak = false;
+bool spinnerStreakSound = false;
+uint streakCounter = 0;
+
 bool checkSpinner()
 {
 	static bool result;
@@ -266,7 +283,37 @@ bool checkSpinner()
 		showRolloverLeds();
 		Msg.ShowScore();
 		result = true;
+
+		if(!spinnerStreak) {
+			streakCounter++;
+			spinnerCountTimer.start(SPINNER_STREAK_TIMER, AsyncDelay::MILLIS);
+			spinnerStreak = true;
+		} else {
+			if(!spinnerCountTimer.isExpired()) {
+				streakCounter++;
+				if(!spinnerStreakSound && streakCounter >= BREAK_STREAK) {
+					Sound::Play(soundNames::WHISTLE);	// TODO: outro som
+					spinnerStreakSound = true;
+				}
+				Serial.print(streakCounter);
+				Serial.print(" ");
+				spinnerCountTimer.restart();
+			}
+		}
 	});
+
+	if(!result && spinnerStreak && spinnerCountTimer.isExpired()) {
+		Serial.print("  Streak: ");
+		Serial.println(streakCounter);
+		if(streakCounter >= BREAK_STREAK) {
+			incrementScore(
+				(streakCounter - 1) * (SPINNER_BREAK_POINTS - SPINNER_POINTS)
+			);
+		}
+		streakCounter = 0;
+		spinnerStreak = false;
+		spinnerStreakSound = false;
+	}
 
 	return result;
 }
