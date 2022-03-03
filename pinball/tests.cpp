@@ -53,7 +53,7 @@ void Tests::Leds()
 
 void Tests::Sounds()
 {
-	for(int i = soundNames::DING; i <= soundNames::BAMBOO; i++) {
+	for(int i = soundNames::DING; i <= soundNames::SHAKE; i++) {
 		Sound::Play(i);
 		Serial.print("Sound #");
 		Serial.println(i);

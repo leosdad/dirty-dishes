@@ -140,7 +140,7 @@ bool checkOrbitSensor()
 	Debounce::Digital(leftOrbitSensor, []() {
 		incrementScore(LEFT_ORBIT_POINTS);
 		if(greasyActive) {
-			Sound::Play(soundNames::CLANG);	// TODO: trocar
+			Sound::Play(soundNames::FRYING);
 			eobBonus += GREASY_BONUS;
 		} else {
 			Sound::Play(soundNames::DING);
@@ -292,19 +292,19 @@ bool checkSpinner()
 			if(!spinnerCountTimer.isExpired()) {
 				streakCounter++;
 				if(!spinnerStreakSound && streakCounter >= BREAK_STREAK) {
-					Sound::Play(soundNames::WHISTLE);	// TODO: outro som
+					Sound::Play(soundNames::GLASS);
 					spinnerStreakSound = true;
 				}
-				Serial.print(streakCounter);
-				Serial.print(" ");
+				// Serial.print(streakCounter);
+				// Serial.print(" ");
 				spinnerCountTimer.restart();
 			}
 		}
 	});
 
 	if(!result && spinnerStreak && spinnerCountTimer.isExpired()) {
-		Serial.print("  Streak: ");
-		Serial.println(streakCounter);
+		// Serial.print("  Streak: ");
+		// Serial.println(streakCounter);
 		if(streakCounter >= BREAK_STREAK) {
 			incrementScore(
 				(streakCounter - 1) * (SPINNER_BREAK_POINTS - SPINNER_POINTS)
@@ -327,7 +327,7 @@ bool checkOutlanes()
 		Flippers::Reset();
 		digitalWrite(stopMagnet, LOW);
 		incrementScore(OUTLANE_POINTS);
-		Sound::Play(soundNames::CLANG);	// TODO: trocar por outro som
+		Sound::Play(soundNames::BUBBLES);
 		Msg.ShowScore();
 		result = true;
 	}

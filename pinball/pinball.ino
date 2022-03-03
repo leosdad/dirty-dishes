@@ -248,7 +248,7 @@ void launching()
 		lastScore = playerScore;
 		skillShotActive = true;
 		Msg.ShowScore();
-		Sound::Play(soundNames::CLANG);
+		Sound::Play(soundNames::FAUCET);
 
 		// Wait for servo door to close before changing state
 		while(!servoTimer.isExpired()) {
@@ -310,14 +310,14 @@ void saveBall()
 	ballSaves++;
 	playerScore = lastScore;
 	Msg.ShowReplay();
-	Sound::Play(soundNames::BAMBOO);
+	Sound::Play(soundNames::SHAKE);
 	setGameState(gameStates::BALL_NEAR_HOME);
 }
 
 void nextBall()
 {
 	Msg.ShowBallLost();
-	Sound::Play(soundNames::BOING);
+	Sound::Play(soundNames::GLUG);
 	delay(DEFAULT_DISPLAY_TIME);
 	showBallScore(false);
 	currentBall++;
@@ -337,7 +337,7 @@ void ballNearHome()
 void gameOver()
 {
 	Msg.ShowEndGame();
-	Sound::Play(soundNames::WHISTLE);
+	Sound::Play(soundNames::CABINET);
 	delay(DEFAULT_DISPLAY_TIME);
 	showBallScore(true);
 	preStartGame();

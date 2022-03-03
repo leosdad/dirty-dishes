@@ -26,7 +26,7 @@
 #define SKILL_SHOT_POINTS		1500
 
 #define GREASY_SCORE			5000
-#define GREASY_BONUS			800
+#define GREASY_BONUS			350
 
 // Time constants
 
@@ -34,7 +34,7 @@
 #define BALL_SAVER_TIME			3000
 #define SKILL_SHOT_TIME			2000
 #define BALL_LOST_TIMEOUT		1700	// Time to reach the rear side
-#define BALL_NEAR_HOME_TIME		400		// Time to place the ball into playfield
+#define BALL_NEAR_HOME_TIME		300		// Time to place the ball into playfield
 #define HOLD_TIME				5000
 #define HOLD_COUNTER_TIME		800
 #define RELEASE_TIME			500		// Must be enough to let the ball go
