@@ -1,8 +1,6 @@
 
 .gitignore
 
-_Lixo/
-artwork/
 .vscode/
 sounds/
-pinball/private-docs/
+docs-private/

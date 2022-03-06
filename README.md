@@ -1,2 +1,3 @@
-# dirty-dishes
-Dirty Dishes Pinball with fischertechnik and Arduino
+# ft-pinball
+
+"Dirty Dishes" pinball with fischertechnik and Arduino

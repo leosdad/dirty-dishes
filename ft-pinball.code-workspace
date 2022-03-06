@@ -4,13 +4,10 @@
 			"path": "."
 		},
 		{
-			"path": "..\\..\\..\\Documentos\\Arduino\\libraries\\ftmodules"
+			"path": "..\\..\\..\\Documentos\\Arduino\\libraries\\ft-modules-lib"
 		},
 		{
-			"path": "..\\..\\Software\\fischertechnik-modules"
-		},
-		{
-			"path": "..\\..\\Software\\fischertechnik-modules\\arduino\\seven-seg-display"
+			"path": "..\\..\\Software\\ft-modules"
 		}
 	],
 	"settings": {
@@ -34,9 +31,6 @@
 			"SCL",
 			"SDA",
 			"SPI"
-		],
-		"search.exclude": {
-			"_Lixo/*": true
-		}
+		]
 	}
 }
