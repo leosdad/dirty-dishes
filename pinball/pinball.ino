@@ -65,7 +65,7 @@ Servo servo;
 
 // Time variables
 
-AsyncDelay ballSaveTimer;
+AsyncDelay freeReplayTimer;
 AsyncDelay servoTimer;
 
 extern AsyncDelay skillShotTimer;
@@ -78,7 +78,7 @@ gameStates gameState = (gameStates)-1;
 gameStates lastGameState = (gameStates)-2;
 byte currentBall = 1;
 byte multiplier = 1;
-byte ballSaves = 0;
+byte freeReplays = 0;
 byte stopSensorHits = 0;
 extraBallStates extraBallState = extraBallStates::NOEXTRABALL;
 
@@ -242,7 +242,7 @@ void launching()
 
 	if(checkLaunch()) {
 		skillShotTimer.start(SKILL_SHOT_TIME, AsyncDelay::MILLIS);
-		ballSaveTimer.start(BALL_SAVER_TIME, AsyncDelay::MILLIS);
+		freeReplayTimer.start(BALL_SAVER_TIME, AsyncDelay::MILLIS);
 		servo.CloseDoor();
 		servoTimer.start(SERVO_TIMER, AsyncDelay::MILLIS);
 		lastScore = playerScore;
@@ -289,7 +289,7 @@ void ballLost()
 {
 	resetLeds();
 
-	if(!ballSaveTimer.isExpired() && ballSaves < MAX_BALL_SAVES) {
+	if(!freeReplayTimer.isExpired() && freeReplays < MAX_FREE_REPLAYS) {
 		setGameState(gameStates::SAVE_BALL);
 	} else {
 		incrementScore(BALL_LOST_POINTS);
@@ -307,8 +307,10 @@ void ballLost()
 
 void saveBall()
 {
-	ballSaves++;
+	freeReplays++;
 	playerScore = lastScore;
+	leds.On(childLeds::LEFT_OUTLANE);
+	leds.On(childLeds::RIGHT_OUTLANE);
 	Msg.ShowReplay();
 	Sound::Play(soundNames::SHAKE);
 	setGameState(gameStates::BALL_NEAR_HOME);
@@ -321,7 +323,7 @@ void nextBall()
 	delay(DEFAULT_DISPLAY_TIME);
 	showBallScore(false);
 	currentBall++;
-	ballSaves = 0;
+	freeReplays = 0;
 	extraBallState = extraBallStates::NOEXTRABALL;
 	setGameState(gameStates::BALL_NEAR_HOME);
 }

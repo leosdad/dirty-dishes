@@ -8,10 +8,10 @@
 // General
 
 #define BALLS_PER_GAME			3
-#define MAX_BALL_SAVES			2
+#define MAX_FREE_REPLAYS		2
 #define MAX_MULTIPLIER			8
 #define HOLD_THRESHOLD			3		// No. of stop sensor hits to activate hold
-#define BREAK_STREAK			13		// Spinner streak for higher scores
+#define BREAK_STREAK			14		// Spinner streak for higher scores
 
 // Points awarded
 
