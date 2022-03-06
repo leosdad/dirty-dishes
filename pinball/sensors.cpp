@@ -102,9 +102,11 @@ void rolloverCallback(uint nRollover)
 		}
 		Msg.ShowMultiplier();
 		multipliersTimer.start(MULTIPLIER_RESET_TIME, AsyncDelay::MILLIS);
+		Sound::Play(soundNames::BELL);
+	} else {
+		Sound::Play(soundNames::DING);
 	}
 	showRolloverLeds();
-	Sound::Play(soundNames::DING);
 }
 
 void resetRollovers()

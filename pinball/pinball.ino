@@ -195,6 +195,7 @@ void gameStart()
 {
 	if(checkButtons()) {
 		Msg.Show("START");
+		Sound::Play(soundNames::CABINET);
 		currentBall = 1;
 		multiplier = 1;
 		playerScore = 0;

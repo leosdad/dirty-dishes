@@ -38,7 +38,7 @@ Servo servoTest;
 
 const char *names[] = {
 	"DING", "DRAIN", "GLASS", "CLANG", "FAUCET", "CRASH",
-	"FRYING", "BUBBLES", "CABINET", "SHAKE"
+	"FRYING", "BUBBLES", "CABINET", "SHAKE", "BELL"
 };
 
 #pragma endregion --------------------------------------------------------------
@@ -60,7 +60,7 @@ void Tests::Leds()
 void Tests::Sounds()
 {
 	if(nSound == 0 || RIGHT_BUTTON_ON) {
-		nSound = nSound == soundNames::SHAKE ? 1 : nSound + 1;
+		nSound = nSound == soundNames::BELL ? 1 : nSound + 1;
 		displaySound(nSound);
 		delay(100);
 	} else if(LEFT_BUTTON_ON) {
