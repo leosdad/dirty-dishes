@@ -280,7 +280,7 @@ bool checkSpinner()
 	result = false;
 
 	Debounce::Read(spinnerSensor, []() {
-		incrementScore(SPINNER_POINTS);
+		incrementScore(streakCounter >= BREAK_STREAK ? SPINNER_BREAK_POINTS : SPINNER_POINTS);
 		rotateRollovers();
 		showRolloverLeds();
 		Msg.ShowScore();
@@ -307,11 +307,6 @@ bool checkSpinner()
 	if(!result && spinnerStreak && spinnerCountTimer.isExpired()) {
 		// Serial.print("  Streak: ");
 		// Serial.println(streakCounter);
-		if(streakCounter >= BREAK_STREAK) {
-			incrementScore(
-				(streakCounter - 1) * (SPINNER_BREAK_POINTS - SPINNER_POINTS)
-			);
-		}
 		streakCounter = 0;
 		spinnerStreak = false;
 		spinnerStreakSound = false;

@@ -21,7 +21,7 @@
 #define BALL_LOST_POINTS		250
 #define OUTLANE_POINTS			800
 #define SPINNER_POINTS			25
-#define SPINNER_BREAK_POINTS	75
+#define SPINNER_BREAK_POINTS	200
 #define ROLLOVER_POINTS			50
 #define SKILL_SHOT_POINTS		1500
 
@@ -34,7 +34,7 @@
 #define BALL_SAVER_TIME			3000
 #define SKILL_SHOT_TIME			2000
 #define BALL_LOST_TIMEOUT		1700	// Time to reach the rear side
-#define BALL_NEAR_HOME_TIME		300		// Time to place the ball into playfield
+#define BALL_NEAR_HOME_TIME		200		// Time to place the ball into playfield
 #define HOLD_TIME				5000
 #define HOLD_COUNTER_TIME		800
 #define RELEASE_TIME			500		// Must be enough to let the ball go
