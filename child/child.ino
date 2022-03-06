@@ -26,7 +26,7 @@
 #define CLOSED_DOOR			10
 #define OPEN_DOOR			110
 #define LED_DEFAULT_TIME	250
-#define DEFAULT_VOLUME		12			// 0-30
+#define DEFAULT_VOLUME		15			// 0-30
 #define FX_TIMEOUT			10
 #define NUMPIXELS1			4
 
@@ -106,6 +106,8 @@ sLedData ledData[NLEDS] = {
 
 void setup()
 {
+	// Initialize
+
 	// Serial.begin(BAUDRATE);
 	soundInit();
 
@@ -236,10 +238,18 @@ void receiveEvent(int nBytes)
 {
 	byte cmd[BUFFER_LENGTH];
 
+	// Serial.print("Command: ");
+
 	for(int count = 0; count < BUFFER_LENGTH; count++) {
 		bool available = Wire.available();
 		cmd[count] = available ? Wire.read() : '\x0';
+		// if(available) {
+		// 	Serial.print((byte)cmd[count]);
+		// 	Serial.print(" ");
+		// }
 	}
+
+	// Serial.println("");
 
 	// Received commands
 
@@ -291,10 +301,10 @@ void soundInit()
 
 	mySoftwareSerial.begin(DFPLAYER_BAUDRATE);
 	if(!myDFPlayer.begin(mySoftwareSerial)) {
-		Serial.println("Unable to start MP3 module");
+		// Serial.println("Unable to start MP3 module");
 		return;
 	}
-	Serial.println("MP3 module ready");
+	// Serial.println("MP3 module ready");
 
 	// The default timeout (500) will freeze the Arduino
 	myDFPlayer.setTimeOut(FX_TIMEOUT);
@@ -352,7 +362,7 @@ void testServo()
 
 	if(ms > tsLast + 2000) {
 		rbdServo.moveToDegrees(tsOpen ? OPEN_DOOR : CLOSED_DOOR);
-		Serial.println(tsOpen ? "open" : "closed");
+		// Serial.println(tsOpen ? "open" : "closed");
 		tsOpen = !tsOpen;
 		tsLast = ms;
 	}
@@ -367,8 +377,8 @@ void testAllLeds()
 	setLed(cLed, false);
 	cLed = cLed == 8 ? 0 : cLed + 1;
 	setLed(cLed, true);
-	Serial.print("LED #");
-	Serial.println(cLed);
+	// Serial.print("LED #");
+	// Serial.println(cLed);
 	delay(400);
 }
 

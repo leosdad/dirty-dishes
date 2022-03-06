@@ -319,7 +319,7 @@ void saveBall()
 void nextBall()
 {
 	Msg.ShowBallLost();
-	Sound::Play(soundNames::GLUG);
+	Sound::Play(soundNames::DRAIN);
 	delay(DEFAULT_DISPLAY_TIME);
 	showBallScore(false);
 	currentBall++;
@@ -339,7 +339,7 @@ void ballNearHome()
 void gameOver()
 {
 	Msg.ShowEndGame();
-	Sound::Play(soundNames::CABINET);
+	Sound::Play(soundNames::CRASH);
 	delay(DEFAULT_DISPLAY_TIME);
 	showBallScore(true);
 	preStartGame();

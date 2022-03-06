@@ -32,8 +32,14 @@ bool ballNearHomeSensorState = true;
 bool spinnerSensorState = true;
 bool leftOrbitSensorState = true;
 
+uint nSound = 0;
 uint nLedTest = 0;
 Servo servoTest;
+
+const char *names[] = {
+	"DING", "DRAIN", "GLASS", "CLANG", "FAUCET", "CRASH",
+	"FRYING", "BUBBLES", "CABINET", "SHAKE"
+};
 
 #pragma endregion --------------------------------------------------------------
 
@@ -53,17 +59,17 @@ void Tests::Leds()
 
 void Tests::Sounds()
 {
-	for(int i = soundNames::DING; i <= soundNames::SHAKE; i++) {
-		Sound::Play(i);
-		Serial.print("Sound #");
-		Serial.println(i);
-		Display::Stop();
-		Display::U2s(displayBuffer, i);
-		Display::Show(displayBuffer);
-		// leds.On((childLeds)(i - 1));
-		delay(2000);
-		// leds.Off((childLeds)(i - 1));
+	if(nSound == 0 || RIGHT_BUTTON_ON) {
+		nSound = nSound == soundNames::SHAKE ? 1 : nSound + 1;
+		displaySound(nSound);
+		delay(100);
+	} else if(LEFT_BUTTON_ON) {
+		Sound::Play(nSound);
 	}
+	while(LEFT_BUTTON_ON || RIGHT_BUTTON_ON) {
+		delay(1);
+	}
+	delay(5);
 }
 
 void Tests::Inputs()
@@ -177,6 +183,17 @@ void Tests::testAnalogSensor(byte sensor, uint min, uint max, char *name)
 		Serial.println(value);
 		delay(50);
 	}
+}
+
+void Tests::displaySound(byte n)
+{
+	Serial.print("Sound #");
+	Serial.print(n);
+	Serial.print(": ");
+	Serial.println(names[n - 1]);
+	Display::Stop();
+	Display::U2s(displayBuffer, n);
+	Display::Show(displayBuffer);
 }
 
 #pragma endregion --------------------------------------------------------------

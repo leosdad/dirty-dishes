@@ -23,6 +23,7 @@ class Tests
   private:
 	static void testDigitalSensor(byte sensor, bool *last, char *name);
 	static void testAnalogSensor(byte sensor, uint min, uint max, char *name);
+	static void displaySound(byte nSound);
 };
 
 #endif // tests_h
